@@ -1,0 +1,16 @@
+{
+  "name": "gamey",
+  "version": "1.0.0",
+  "description": "",
+  "main": "start.js",
+  "scripts": {
+    "start": "electron start.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^16.0.4",
+    "electron-packager": "^15.4.0"
+  }
+}

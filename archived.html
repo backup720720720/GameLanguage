@@ -1,0 +1,318 @@
+<html lang="en">
+<head>
+    <title>Gamey</title>
+</head>
+<body style="background: #2b2b2b">
+<div class="container">
+    <h1 id="NAME"></h1>
+    <div class="create">
+        <h1 id="LNG-projects" class="btn" onclick="window.location.href = './projects.html'"></h1>
+    </div>
+    <h2 class="back-pad" id="LNG-archived-projects"></h2>
+    <div class="extra-pad projects scroll">
+        <div id="projects">
+        </div>
+    </div>
+</div>
+<div class="popup-container" id="popup" hidden>
+    <div class="popup">
+        <div class="popup-contents">
+            <div id="popup-content"></div>
+            <svg onclick="close_popup()" width="50" height="35" class="popup-close">
+                <path d="M20 12 L30 22 Z" stroke="white"></path>
+                <path d="M30 12 L20 22 Z" stroke="white"></path>
+            </svg>
+        </div>
+    </div>
+</div>
+<div style="position: absolute;left:0;top:0;width:100%;height:100%;background:#232323" id="start"></div>
+</body>
+</html>
+<script src="scripts/project-api.js"></script>
+<script src="scripts/compiler.js"></script>
+<script>
+    const translation = {
+        en_US: {
+            "archived-title": "Your archived projects",
+            "console": "Create a console project",
+            "game": "Create a game project",
+            "console-title": "Console Project",
+            "game-title": "Game Project",
+            "rename-title": "Rename Project",
+            "remove-title": "Remove Project",
+            "project-name": "Enter project name...",
+            "project-rename": "Enter new project name...",
+            "invalid-project-name": "Invalid project name",
+            "project-exists": "This project exists",
+            "project-doesnt-exist": "Project doesn't exist",
+            "archived-dont-exist": "Archived project doesn't exist",
+            "project-exists-try-rename": "Project named that exists, try renaming",
+            "create-project-button": "Create project",
+            "rename-project-button": "Rename project",
+            "remove-project-button": "Remove project",
+            "projects-page": "View projects",
+            "are-you-sure-remove": "Are you sure?",
+            "console-type": "Console",
+            "game-type": "Game"
+        },
+        tr_TR: {
+            "archived-title": "Arşivlenmiş projelerin",
+            "console": "Konsol projesi oluştur",
+            "game": "Oyun projesi oluştur",
+            "console-title": "Konsol Projesi",
+            "game-title": "Oyun Projesi",
+            "rename-title": "Projeyi Yeniden Adlandır",
+            "remove-title": "Projeyi Sil",
+            "project-name": "Proje adını gir...",
+            "project-rename": "Yeni proje adını gir...",
+            "invalid-project-name": "Geçersiz proje adı",
+            "project-exists": "Bu proje zaten var",
+            "project-doesnt-exist": "Proje bulunamadı",
+            "archived-dont-exist": "Arşivlenmiş proje bulunamadı",
+            "project-exists-try-rename": "Bu isime ait bir proje var, yeniden adlandırmayı deneyin",
+            "create-project-button": "Proje oluştur",
+            "rename-project-button": "Projeyi yeniden adlandır",
+            "remove-project-button": "Projeyi sil",
+            "projects-page": "Projeleri görüntüle",
+            "are-you-sure-remove": "Emin misin?",
+            "console-type": "Konsol",
+            "game-type": "Oyun"
+        }
+    };
+    const create_popup = content => {
+        document.getElementById("popup").hidden = undefined;
+        document.getElementById("popup-content").innerHTML = content;
+    };
+    const close_popup = () => {
+        document.getElementById("popup").hidden = true;
+        document.getElementById("popup-content").innerHTML = "";
+    }
+    const rename_project = (id) => {
+        create_popup(`
+<h1 style="text-align: center">${translation[lang]["rename-title"]}</h1>
+<div class="popup-form" style="position: absolute;left: 0;width: 100%;height: 100%">
+    <div style="text-align: center">
+        <span style="color: #e81123" id="popup-error"></span><br>
+        <input maxlength="16" style="" type="text" placeholder="${translation[lang]["project-rename"]}" class="popup-input" id="popup-name"><br>
+        <button class="submit popup-input popup-button" id="popup-send">${translation[lang]["rename-project-button"]}</button>
+    </div>
+</div>`);
+        document.getElementById("popup-send").addEventListener("click", () => {
+            const response = document.ProjectAPI.rename_archived_project(id, document.getElementById("popup-name").value);
+            if (response !== "success") {
+                document.getElementById("popup-error").innerHTML = translation[lang][response];
+            } else {
+                close_popup();
+                refresh_project_div();
+            }
+        });
+    }
+    const get_project_temp = (name, id, type, lastUsed) => `
+<div class="project" id="project-${id}">
+    <div class="title">${name} (${[null, translation[lang]["console-type"], translation[lang]["game-type"]][type]})</div>
+    <div class="last-used">${(new Date(lastUsed)).toLocaleString()}</div>
+    <img class="archive" src="assets/rearchive.png" onclick="re_archive_project('${id}')">
+    <img class="rename" src="assets/rename.png" onclick="rename_project('${id}')">
+    <img class="remove" src="assets/archive_red.png" onclick="remove_project('${id}')">
+</div>`;
+    const refresh_project_div = () => {
+        const projects = document.ProjectAPI.json().archived;
+        document.getElementById("projects").innerHTML = Object.keys(projects).map((name) => get_project_temp(projects[name].name, projects[name].id, projects[name].type, projects[name].archivedTimestamp)).join("");
+    }
+    const re_archive_project = archive_id => {
+        const result = document.ProjectAPI.re_archive_project(archive_id);
+        if (result !== "success") create_popup(translation[lang][result]);
+        refresh_project_div();
+    }
+    const remove_project = archive_id => {
+        create_popup(`
+<h1 style="text-align: center">${translation[lang]["remove-title"]}</h1>
+<div class="popup-form" style="position: absolute;left: 0;width: 100%;height: 100%">
+    <div style="text-align: center">
+        <span style="color: #e81123" id="popup-error">${translation[lang]["are-you-sure-remove"]}</span><br>
+        <button class="submit popup-input popup-button" id="popup-send">${translation[lang]["remove-project-button"]}</button>
+    </div>
+</div>`);
+        document.getElementById("popup-send").addEventListener("click", () => {
+            const result = document.ProjectAPI.remove_archived_project(archive_id);
+            if (result !== "success") create_popup(translation[lang][result]);
+            close_popup();
+            refresh_project_div();
+        });
+    }
+    addEventListener("keydown", ev => ev.key === "Escape" ? close_popup() : null)
+    window.load_start = () => {
+        document.getElementById("LNG-projects").innerHTML = translation[lang]["projects-page"];
+        document.getElementById("LNG-projects").title = translation[lang]["projects-page"];
+        document.getElementById("LNG-archived-projects").innerHTML = translation[lang]["archived-title"];
+        document.getElementById("NAME").innerHTML = NAME;
+        refresh_project_div();
+        document.getElementById("start").hidden = true;
+    }
+</script>
+<style>
+    @font-face {
+        font-family: ProximaNova;
+        src: url("Proxima Nova Font.otf") format("opentype");
+    }
+
+    ::-webkit-scrollbar {
+        width: 10px;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: #f1f1f1;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: #888;
+        cursor: pointer;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        background: #555;
+    }
+
+    .submit {
+        cursor: pointer;
+    }
+
+    .container {
+        padding-top: 20px;
+        padding-left: 30px;
+    }
+
+    .projects {
+        position: absolute;
+        width: 60%;
+        padding-left: 20px;
+        color: #dae5d8;
+    }
+
+    .back-pad {
+        padding-left: 20px;
+    }
+
+    .scroll {
+        overflow-y: scroll;
+        width: 57%;
+        height: 70%;
+    }
+
+    .project {
+        background: none;
+        padding: 20px 20px 40px;
+        cursor: pointer;
+        margin-bottom: 10px;
+    }
+
+    .project:hover {
+        background: #232323;
+    }
+
+    .last-used {
+        position: relative;
+        float: right;
+        top: -15px;
+    }
+
+    .archive {
+        position: relative;
+        float: right;
+        left: 140px;
+        top: 5px;
+        padding-bottom: 20px;
+        width: 5%;
+    }
+
+    .rename {
+        position: relative;
+        float: right;
+        left: 130px;
+        top: 5px;
+        padding-bottom: 20px;
+        width: 4%;
+    }
+
+    .remove {
+        position: relative;
+        float: right;
+        left: 120px;
+        top: 5px;
+        padding-bottom: 20px;
+        width: 3%;
+    }
+
+    .extra-pad {
+        padding-left: 40px
+    }
+
+    .create {
+        position: absolute;
+        top: 150px;
+        right: 90px;
+    }
+
+    .btn {
+        font-weight: normal;
+        font-size: 25px;
+        padding: 10px;
+        border: 1px solid white;
+        border-radius: 3px;
+        box-shadow: 2px 2px;
+        cursor: pointer;
+    }
+
+    .btn:hover {
+        background: #232323;
+    }
+
+    .popup {
+        position: absolute;
+        width: 60%;
+        height: 60%;
+        background: #232323;
+        border-radius: 8px;
+        left: 20%;
+        top: 15%;
+        opacity: 97%;
+    }
+
+    .popup-contents {
+        padding: 30px;
+    }
+
+    .popup-close {
+        position: absolute;
+        right: 0;
+        top: 0;
+        background: #e81123;
+        cursor: pointer;
+    }
+
+    .popup-close:hover {
+        background: #b00b1a;
+    }
+
+    .popup-container {
+        position: absolute;
+        width: 98%;
+        height: 74%;
+    }
+
+    .popup-input {
+        background: #232323;
+        color: white;
+        border-radius: 2px;
+        border: 1px solid white;
+        padding: 10px;
+        margin-top: 20px;
+    }
+
+    * {
+        user-select: none;
+        color: white;
+        font-weight: bolder;
+        font-family: ProximaNova, serif;
+    }
+</style>

@@ -1,0 +1,543 @@
+<!--suppress JSFileReferences -->
+<html lang="en">
+<head>
+    <title id="ttl"></title>
+</head>
+<body style="background: #2b2b2b">
+<div class="container">
+    <h1 id="NAME"></h1>
+    <div class="buttons">
+        <button class="btn" id="exit" onclick="window.location.href = './projects.html'"></button>
+        <button class="btn" id="stop_all" onclick="stop_all()"></button>
+        <button class="btn" id="start_compile" onclick="start_compile()"></button>
+    </div>
+    <textarea spellcheck="false" style="resize: none" id="code_area" class="code"></textarea>
+    <div id="toolbar" class="toolbar-selections">
+        <div>
+            <div class="toolbar-game" id="toolbar-game-toggle" onclick="toggle_game_area()">
+                <div class="toolbar-game-toggle" id="toolbar-game-toggle-toggle">
+                    <span style="font-family: Consolas, serif" id="LNG-game"></span>
+                    <svg width="20" height="20" style="position: absolute" id="open-game-btn">
+                        <path d="M5 13 L10 7 Z" stroke="white"></path>
+                        <path d="M10 7 L15 13 Z" stroke="white"></path>
+                    </svg>
+                    <svg width="20" height="20" class="hidden" style="position: absolute" id="close-game-btn">
+                        <path d="M5 7 L10 13 Z" stroke="white"></path>
+                        <path d="M10 13 L15 7 Z" stroke="white"></path>
+                    </svg>
+                </div>
+            </div>
+            <div id="toolbar-console-toggle" onclick="toggle_console_area()">
+                <div class="toolbar-console-toggle" id="toolbar-console-toggle-toggle">
+                    <span style="font-family: Consolas, serif" id="LNG-console"></span>
+                    <svg width="20" height="20" style="position: absolute" id="open-console-btn">
+                        <path d="M5 13 L10 7 Z" stroke="white"></path>
+                        <path d="M10 7 L15 13 Z" stroke="white"></path>
+                    </svg>
+                    <svg width="20" height="20" class="hidden" style="position: absolute" id="close-console-btn">
+                        <path d="M5 7 L10 13 Z" stroke="white"></path>
+                        <path d="M10 13 L15 7 Z" stroke="white"></path>
+                    </svg>
+                </div>
+            </div>
+        </div>
+        <img src="./assets/clear.png" class="clear" onclick="clear_console()">
+        <canvas class="toolbar-canvas" id="toolbar-canvas" hidden></canvas>
+        <div class="toolbar-console" id="toolbar-console" hidden>
+            <div id="toolbar-console-text" style="padding: 1%"></div>
+        </div>
+    </div>
+</div>
+<div class="popup-container" id="popup" hidden>
+    <div class="popup">
+        <div class="popup-contents">
+            <div id="popup-content"></div>
+            <svg onclick="close_popup()" width="50" height="35" class="popup-close">
+                <path d="M20 12 L30 22 Z" stroke="white"></path>
+                <path d="M30 12 L20 22 Z" stroke="white"></path>
+            </svg>
+        </div>
+    </div>
+</div>
+<div style="position: absolute;left:0;top:0;width:100%;height:100%;background:#232323" id="start"></div>
+</body>
+</html>
+<script src="scripts/project-api.js"></script>
+<script src="scripts/compiler.js"></script>
+<script src="scripts/entity-api.js"></script>
+<script>
+    const gamey = document._gamey;
+    const PROJECT_NAME = window.location.href.split("?name=").slice(1).join("");
+    document.getElementById("ttl").innerHTML = "Gamey - " + PROJECT_NAME;
+    const PROJECT = document.ProjectAPI.json().projects[PROJECT_NAME];
+    const code_area = document.getElementById("code_area");
+    const console_text = document.getElementById("toolbar-console");
+    const console_text_text = document.getElementById("toolbar-console-text");
+    code_area.value = PROJECT.code;
+    const canvas = document.getElementById("toolbar-canvas");
+    /*** @type {CanvasRenderingContext2D} */
+    const ctx = canvas.getContext("2d");
+    /*** @type {Entity[]} */
+    let entities = [];
+
+    function render(ent = true) {
+        canvas.width = window.innerWidth - 2;
+        canvas.height = (window.innerHeight - 2) * 67.4 / 100;
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        entities.filter(entity => entity.alive).sort((a, b) => a.priority - b.priority).forEach(entity => {
+            if (ent) entity.update();
+            else if (entity.getSelectedModel()) entity.getSelectedModel().render();
+        });
+    }
+
+    setInterval(() => {
+        render(gamey.any_alive_process());
+    }, 20);
+    const stop_all = () => {
+        gamey.kill_all();
+        log_console(gamey.langs[lang]["stopped"], "rgb(255, 0, 0)");
+    }
+    const log_console = (msg, color) => {
+        console_text_text.innerHTML = console_text_text.innerHTML + "<span style='color: " + (color || "#ffffff") + "'>" + msg.toString().replaceAll("<", "&zwnj;<").replaceAll("<", "<&zwnj;") + "</span><br>";
+        console_text_text.scrollTop = console_text_text.scrollHeight;
+    }
+    const clear_console = () => console_text_text.innerHTML = "";
+    const start_compile = () => {
+        if (gamey.any_alive_process()) return;
+        entities = [];
+        render();
+        gamey.kill_all();
+        const compiler = new gamey.Compiler(code_area.value.split("\n"));
+        open_game_area();
+        compiler.on("on_print", text => gamey.any_alive_process() ? log_console(text) : null);
+        compiler.on("on_stop", () => log_console(gamey.langs[lang]["stopped"], "rgb(255, 0, 0)"));
+        compiler.on("on_end", () => log_console(gamey.langs[lang]["ended"], "rgb(255, 255, 0)"));
+        compiler.on("on_error", err => log_console(translation[lang]["error"] + ": " + err, "rgb(255, 0, 0)"));
+        compiler.on("on_clear", () => clear_console());
+        compiler.compile();
+    }
+    const toolbar = document.getElementById("toolbar");
+    const toggle_game_area = () => {
+        if (canvas.hidden) return open_game_area();
+        close_game_area();
+    }
+    const open_game_area = () => {
+        close_console_area();
+        toolbar.classList.add("game-open");
+        document.getElementById("toolbar-canvas").hidden = undefined;
+        document.getElementById("open-game-btn").classList.add("hidden");
+        document.getElementById("close-game-btn").classList.remove("hidden");
+    }
+    const close_game_area = () => {
+        toolbar.classList.remove("game-open");
+        document.getElementById("toolbar-canvas").hidden = true;
+        document.getElementById("open-game-btn").classList.remove("hidden");
+        document.getElementById("close-game-btn").classList.add("hidden");
+    }
+    const toggle_console_area = () => {
+        if (console_text.hidden) return open_console_area();
+        close_console_area();
+    }
+    const open_console_area = () => {
+        close_game_area();
+        toolbar.classList.add("console-open");
+        console_text.hidden = undefined;
+        document.getElementById("open-console-btn").classList.add("hidden");
+        document.getElementById("close-console-btn").classList.remove("hidden");
+    }
+    const close_console_area = () => {
+        toolbar.classList.remove("console-open");
+        console_text.hidden = true;
+        document.getElementById("open-console-btn").classList.remove("hidden");
+        document.getElementById("close-console-btn").classList.add("hidden");
+    }
+    let held_keys = {};
+    let game_area_shortcut = false;
+    addEventListener("keydown", ev => {
+        held_keys[ev.key] = true;
+        if (held_keys["\""] && held_keys["Control"]) {
+            if (!game_area_shortcut) {
+                game_area_shortcut = true;
+                toggle_game_area();
+            }
+        } else game_area_shortcut = false;
+    });
+    addEventListener("keyup", ev => delete held_keys[ev.key]);
+    setInterval(() => {
+        document.getElementById("stop_all").disabled = gamey.any_alive_process() ? undefined : true;
+        document.getElementById("start_compile").disabled = gamey.any_alive_process() ? true : undefined;
+    });
+    setInterval(() => {
+        if (PROJECT.code !== code_area.value) {
+            PROJECT.code = code_area.value;
+            document.ProjectAPI.update_project_code(PROJECT_NAME, PROJECT.code);
+        }
+    }, 5000);
+    const translation = {
+        en_US: {
+            "exit": "Save & Exit",
+            "stop_all": "Stop",
+            "start_compile": "Start",
+            "error": "Error",
+            "game": "Game",
+            "create_entity": "create_entity",
+            "create_image_model": "create_image_model",
+            "argument-string": "%0. argument should be string",
+            "argument-number": "%0. argument should be number",
+            "entity-not-found": "Entity not found",
+            "model-not-found": "Model not found",
+            "console": "Console",
+            "key_down": "key_down",
+            "set_width": "set_width",
+            "set_height": "set_height",
+            "set_x": "set_x",
+            "set_y": "set_y",
+            "set_angle": "set_angle",
+            "get_width": "get_width",
+            "get_height": "get_height",
+            "get_x": "get_x",
+            "get_y": "get_y",
+            "get_angle": "get_angle"
+        },
+        tr_TR: {
+            "exit": "Kaydet & Ç\u0131k",
+            "stop_all": "Durdur",
+            "start_compile": "Ba\u015flat",
+            "error": "Hata",
+            "game": "Oyun",
+            "create_entity": "canl\u0131_olu\u015ftur",
+            "create_image_model": "resim_model_olu\u015ftur",
+            "argument-string": "%0. arg\u00fcman yaz\u0131 olmal\u0131",
+            "argument-number": "%0. arg\u00fcman say\u0131 olmal\u0131",
+            "entity-not-found": "Canl\u0131 bulunamad\u0131",
+            "model-not-found": "Model bulunamad\u0131",
+            "console": "Konsol",
+            "key_down": "basılı_tuş",
+            "set_width": "genişlik_ayarla",
+            "set_height": "yükseklik_ayarla",
+            "set_x": "x_ayarla",
+            "set_y": "y_ayarla",
+            "set_angle": "açı_ayarla",
+            "get_width": "genişlik",
+            "get_height": "yükseklik",
+            "get_x": "x",
+            "get_y": "y",
+            "get_angle": "açı"
+        }
+    };
+    const create_popup = content => {
+        document.getElementById("popup").hidden = undefined;
+        document.getElementById("popup-content").innerHTML = content;
+    };
+    const close_popup = () => {
+        document.getElementById("popup").hidden = true;
+        document.getElementById("popup-content").innerHTML = "";
+    }
+    addEventListener("keydown", ev => ev.key === "Escape" ? close_popup() : null)
+    window.load_start = () => {
+        document.getElementById("NAME").innerHTML = NAME;
+        document.getElementById("exit").innerHTML = translation[lang]["exit"];
+        document.getElementById("stop_all").innerHTML = translation[lang]["stop_all"];
+        document.getElementById("start_compile").innerHTML = translation[lang]["start_compile"];
+        document.getElementById("LNG-game").innerHTML = translation[lang]["game"];
+        document.getElementById("LNG-console").innerHTML = translation[lang]["console"];
+        // noinspection JSValidateTypes
+        document.getElementById("toolbar-game-toggle-toggle").style = `left: 1px;width: ${25 + (translation[lang]["game"].length * 8)}px;height: 18px;cursor:pointer`;
+        // noinspection JSValidateTypes
+        document.getElementById("toolbar-console-toggle-toggle").style = `left: ${25 + (translation[lang]["console"].length * 8)}px;width: ${25 + (translation[lang]["console"].length * 8)}px;height: 18px;cursor:pointer`;
+        document.getElementById("start").hidden = true;
+        gamey.add_default_function(gamey.generate_function(() => translation[lang]["create_entity"], (args, compiler) => {
+            args = args.map(i=> gamey._eval(i));
+            if (Object.keys(args)[0] && typeof args[0] !== "number") return gamey._err(gamey.langs[lang]["arguments-number"], compiler);
+            if (Object.keys(args)[1] && typeof args[1] !== "number") return gamey._err(gamey.langs[lang]["arguments-number"], compiler);
+            const entity = new Entity((args[0] || 0) * 1, (args[1] || 0) * 1);
+            return new gamey._Number(entity.uuid);
+        }));
+        gamey.add_default_function(gamey.generate_function(() => translation[lang]["create_image_model"], (args, compiler) => {
+            args = args.map(i=> gamey._eval(i));
+            if (Object.keys(args)[0] && typeof args[0] !== "number") return gamey._err(translation[lang]["argument-number"].replace("%0", "1"), compiler);
+            if (Object.keys(args)[1] && typeof args[1] !== "string") return gamey._err(translation[lang]["argument-string"].replace("%0", "2"), compiler);
+            if (Object.keys(args)[2] && typeof args[2] !== "string") return gamey._err(translation[lang]["argument-string"].replace("%0", "3"), compiler);
+            const entity = entities.find(entity => entity.uuid === args[0]);
+            if (!entity) return gamey._err(translation[lang]["entity-not-found"], compiler);
+            const model = new ImageModel(args[1], entity);
+            model.setImage(args[2]);
+            return new gamey._Number(model.uuid);
+        }));
+        gamey.add_default_function(gamey.generate_function(() => translation[lang]["set_width"], (args, compiler) => {
+            args = args.map(i=> gamey._eval(i));
+            if (Object.keys(args)[0] && typeof args[0] !== "number") return gamey._err(translation[lang]["argument-number"].replace("%0", "1"), compiler);
+            if (Object.keys(args)[1] && typeof args[1] !== "string") return gamey._err(translation[lang]["argument-string"].replace("%0", "2"), compiler);
+            const entity = entities.find(entity => entity.uuid === args[0]);
+            if (!entity) return gamey._err(translation[lang]["entity-not-found"], compiler);
+            entity.width = args[1];
+            return new gamey._Null();
+        }));
+        gamey.add_default_function(gamey.generate_function(() => translation[lang]["set_height"], (args, compiler) => {
+            args = args.map(i=> gamey._eval(i));
+            if (Object.keys(args)[0] && typeof args[0] !== "number") return gamey._err(translation[lang]["argument-number"].replace("%0", "1"), compiler);
+            if (Object.keys(args)[1] && typeof args[1] !== "string") return gamey._err(translation[lang]["argument-string"].replace("%0", "2"), compiler);
+            const entity = entities.find(entity => entity.uuid === args[0]);
+            if (!entity) return gamey._err(translation[lang]["entity-not-found"], compiler);
+            entity.height = args[1];
+            return new gamey._Null();
+        }));
+        gamey.add_default_function(gamey.generate_function(() => translation[lang]["get_width"], (args, compiler) => {
+            args = args.map(i=> gamey._eval(i));
+            if (Object.keys(args)[0] && typeof args[0] !== "number") return gamey._err(translation[lang]["argument-number"].replace("%0", "1"), compiler);
+            if (Object.keys(args)[1] && typeof args[1] !== "string") return gamey._err(translation[lang]["argument-string"].replace("%0", "2"), compiler);
+            const entity = entities.find(entity => entity.uuid === args[0]);
+            if (!entity) return gamey._err(translation[lang]["entity-not-found"], compiler);
+            return new gamey._Number(entity.width);
+        }));
+        gamey.add_default_function(gamey.generate_function(() => translation[lang]["get_height"], (args, compiler) => {
+            args = args.map(i=> gamey._eval(i));
+            if (Object.keys(args)[0] && typeof args[0] !== "number") return gamey._err(translation[lang]["argument-number"].replace("%0", "1"), compiler);
+            if (Object.keys(args)[1] && typeof args[1] !== "string") return gamey._err(translation[lang]["argument-string"].replace("%0", "2"), compiler);
+            const entity = entities.find(entity => entity.uuid === args[0]);
+            if (!entity) return gamey._err(translation[lang]["entity-not-found"], compiler);
+            return new gamey._Number(entity.height);
+        }));
+        gamey.add_default_function(gamey.generate_function(() => translation[lang]["set_x"], (args, compiler) => {
+            args = args.map(i=> gamey._eval(i));
+            if (Object.keys(args)[0] && typeof args[0] !== "number") return gamey._err(translation[lang]["argument-number"].replace("%0", "1"), compiler);
+            if (Object.keys(args)[1] && typeof args[1] !== "number") return gamey._err(translation[lang]["argument-number"].replace("%0", "2"), compiler);
+            const entity = entities.find(entity => entity.uuid === args[0]);
+            if (!entity) return gamey._err(translation[lang]["entity-not-found"], compiler);
+            entity.x = args[1];
+            return new gamey._Null();
+        }));
+        gamey.add_default_function(gamey.generate_function(() => translation[lang]["set_y"], (args, compiler) => {
+            args = args.map(i=> gamey._eval(i));
+            if (Object.keys(args)[0] && typeof args[0] !== "number") return gamey._err(translation[lang]["argument-number"].replace("%0", "1"), compiler);
+            if (Object.keys(args)[1] && typeof args[1] !== "number") return gamey._err(translation[lang]["argument-number"].replace("%0", "2"), compiler);
+            const entity = entities.find(entity => entity.uuid === args[0]);
+            if (!entity) return gamey._err(translation[lang]["entity-not-found"], compiler);
+            entity.y = args[1];
+            return new gamey._Null();
+        }));
+        gamey.add_default_function(gamey.generate_function(() => translation[lang]["set_angle"], (args, compiler) => {
+            args = args.map(i=> gamey._eval(i));
+            if (Object.keys(args)[0] && typeof args[0] !== "number") return gamey._err(translation[lang]["argument-number"].replace("%0", "1"), compiler);
+            if (Object.keys(args)[1] && typeof args[1] !== "number") return gamey._err(translation[lang]["argument-number"].replace("%0", "2"), compiler);
+            const entity = entities.find(entity => entity.uuid === args[0]);
+            if (!entity) return gamey._err(translation[lang]["entity-not-found"], compiler);
+            entity.angle = args[1];
+            return new gamey._Null();
+        }));
+        gamey.add_default_function(gamey.generate_function(() => translation[lang]["get_x"], (args, compiler) => {
+            args = args.map(i=> gamey._eval(i));
+            if (Object.keys(args)[0] && typeof args[0] !== "number") return gamey._err(translation[lang]["argument-number"].replace("%0", "1"), compiler);
+            const entity = entities.find(entity => entity.uuid === args[0]);
+            if (!entity) return gamey._err(translation[lang]["entity-not-found"], compiler);
+            return new gamey._Number(entity.x);
+        }));
+        gamey.add_default_function(gamey.generate_function(() => translation[lang]["get_y"], (args, compiler) => {
+            args = args.map(i=> gamey._eval(i));
+            if (Object.keys(args)[0] && typeof args[0] !== "number") return gamey._err(translation[lang]["argument-number"].replace("%0", "1"), compiler);
+            const entity = entities.find(entity => entity.uuid === args[0]);
+            if (!entity) return gamey._err(translation[lang]["entity-not-found"], compiler);
+            return new gamey._Number(entity.y);
+        }));
+        gamey.add_default_function(gamey.generate_function(() => translation[lang]["get_angle"], (args, compiler) => {
+            args = args.map(i=> gamey._eval(i));
+            if (Object.keys(args)[0] && typeof args[0] !== "number") return gamey._err(translation[lang]["argument-number"].replace("%0", "1"), compiler);
+            const entity = entities.find(entity => entity.uuid === args[0]);
+            if (!entity) return gamey._err(translation[lang]["entity-not-found"], compiler);
+            return new gamey._Number(entity.angle);
+        }));
+        gamey.add_default_function(gamey.generate_function(() => translation[lang]["key_down"], (args, compiler) => {
+            args = args.map(i=> gamey._eval(i));
+            if (Object.keys(args)[0] && typeof args[0] !== "string") return gamey._err(translation[lang]["argument-string"].replace("%0", "1"), compiler);
+            return new gamey._Number(held_keys[args[0]] ? 1 : 0);
+        }));
+    }
+</script>
+<style>
+    @font-face {
+        font-family: ProximaNova;
+        src: url("Proxima Nova Font.otf") format("opentype");
+    }
+
+    .toolbar-selections {
+        position: absolute;
+        left: 0;
+        bottom: 0;
+        width: 100%;
+        height: 3%;
+        background: #232323;
+    }
+
+    .toolbar-game-toggle {
+        position: absolute;
+    }
+
+    .toolbar-console-toggle {
+        position: absolute;
+    }
+
+    .toolbar-canvas {
+        position: absolute;
+        bottom: 0;
+    }
+
+    .toolbar-console {
+        position: absolute;
+        width: 99.8%;
+        height: 85%;
+        min-height: 85%;
+        max-height: 85%;
+        overflow-y: auto;
+        margin-top: 3%;
+    }
+
+    .game-open {
+        height: 70%;
+    }
+
+    .console-open {
+        height: 30%;
+    }
+
+    .clear {
+        position: absolute;
+        right: 10px;
+        width: 1.8%;
+        cursor: pointer;
+    }
+
+    .hidden {
+        opacity: 0;
+    }
+
+    .buttons {
+        position: absolute;
+        right: 50px;
+        top: 25px;
+    }
+
+    .btn {
+        margin-left: 10px;
+        background: #2b2b2b;
+        font-weight: normal;
+        font-size: 25px;
+        padding: 10px;
+        border: 1px solid white;
+        border-radius: 3px;
+        box-shadow: 2px 2px;
+        cursor: pointer;
+    }
+
+    .btn:hover {
+        background: #232323;
+    }
+
+    .btn:disabled {
+        opacity: 50%;
+        cursor: default;
+    }
+
+    ::-webkit-scrollbar {
+        width: 10px;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: #f1f1f1;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: #888;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        background: #555;
+    }
+
+    .code {
+        font-family: Consolas, Courier New, monospace;
+        font-weight: normal;
+        letter-spacing: 0;
+        line-height: 19px;
+        font-size: 14px;
+        border: none;
+        border-radius: 10px;
+        width: 97%;
+        height: 100%;
+        overflow-y: auto;
+        overflow-x: auto;
+        min-height: 80%;
+        max-height: 80%;
+        background: #232323;
+    }
+
+    .lines {
+        border-right: 1px solid white;
+        position: absolute;
+        padding-left: 1%;
+        padding-right: 1%;
+        min-width: 1%;
+        height: 78.4%;
+        text-align: center;
+    }
+
+    .code_area {
+        font-family: Consolas, Courier New, monospace;
+        font-weight: normal;
+        letter-spacing: 0;
+        line-height: 19px;
+        font-size: 14px;
+        position: relative;
+        margin-left: 4%;
+        min-width: 87%;
+        max-width: 87%;
+        min-height: 78%;
+        max-height: 78%;
+        background: none;
+        border: none;
+    }
+
+    .container {
+        padding-top: 20px;
+        padding-left: 30px;
+    }
+
+    .popup {
+        position: absolute;
+        width: 60%;
+        height: 60%;
+        background: #232323;
+        border-radius: 8px;
+        left: 20%;
+        opacity: 97%;
+    }
+
+    .popup-contents {
+        padding: 30px;
+    }
+
+    .popup-close {
+        position: absolute;
+        right: 0;
+        top: 0;
+        background: #e81123;
+        cursor: pointer;
+    }
+
+    .popup-close:hover {
+        background: #b00b1a;
+    }
+
+    .popup-container {
+        position: absolute;
+        width: 98%;
+        height: 74%;
+    }
+
+    * {
+        user-select: none;
+        color: white;
+        font-weight: bolder;
+        font-family: ProximaNova, serif;
+    }
+</style>

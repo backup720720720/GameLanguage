@@ -1,0 +1,18 @@
+<script src="scripts/project-api.js"></script>
+<script src="scripts/compiler.js"></script>
+<textarea id="code" onchange="localStorage.setItem('code', document.getElementById('code').value)"></textarea>
+<br>
+<button onclick="document._gamey.compile(document.getElementById('code').value)">Compile</button>
+<script>
+    document.getElementById("code").value = localStorage.getItem("code") || "";
+    window.load_start = () => {
+    }
+</script>
+<style>
+    textarea {
+        min-width: 700px;
+        max-width: 700px;
+        min-height: 700px;
+        max-height: 700px;
+    }
+</style>

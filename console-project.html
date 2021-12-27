@@ -1,0 +1,319 @@
+<!--suppress JSFileReferences -->
+<html lang="en">
+<head>
+    <title id="ttl"></title>
+</head>
+<body style="background: #2b2b2b">
+<div class="container">
+    <h1 id="NAME"></h1>
+    <div class="buttons">
+        <button class="btn" id="exit" onclick="window.location.href = './projects.html'"></button>
+        <button class="btn" id="stop_all" onclick="stop_all()"></button>
+        <button class="btn" id="start_compile" onclick="start_compile()"></button>
+    </div>
+    <textarea spellcheck="false" style="resize: none" id="code_area" class="code"></textarea>
+    <div class="terminal" id="terminal">
+        <div id="terminal-toggle" onclick="toggle_terminal()">
+            <span style="font-family: Consolas, serif" id="LNG-console"></span>
+            <svg width="20" height="20" style="position: absolute" id="open_terminal">
+                <path d="M5 13 L10 7 Z" stroke="white"></path>
+                <path d="M10 7 L15 13 Z" stroke="white"></path>
+            </svg>
+            <svg width="20" height="20" class="hidden" style="position: absolute" id="close_terminal">
+                <path d="M5 7 L10 13 Z" stroke="white"></path>
+                <path d="M10 13 L15 7 Z" stroke="white"></path>
+            </svg>
+        </div>
+        <img class="clear" onclick="clear_console()" src="assets/clear.png">
+        <div id="terminal-list" class="terminal-list" style="font-family: Consolas, serif" hidden></div>
+    </div>
+</div>
+<div class="popup-container" id="popup" hidden>
+    <div class="popup">
+        <div class="popup-contents">
+            <div id="popup-content"></div>
+            <svg onclick="close_popup()" width="50" height="35" class="popup-close">
+                <path d="M20 12 L30 22 Z" stroke="white"></path>
+                <path d="M30 12 L20 22 Z" stroke="white"></path>
+            </svg>
+        </div>
+    </div>
+</div>
+<div style="position: absolute;left:0;top:0;width:100%;height:100%;background:#232323" id="start"></div>
+</body>
+</html>
+<script src="scripts/project-api.js"></script>
+<script src="scripts/compiler.js"></script>
+<script>
+    const PROJECT_NAME = window.location.href.split("?name=").slice(1).join("");
+    document.getElementById("ttl").innerHTML = "Gamey - " + PROJECT_NAME;
+    const PROJECT = document.ProjectAPI.json().projects[PROJECT_NAME];
+    const code_area = document.getElementById("code_area");
+    code_area.value = PROJECT.code;
+    const stop_all = () => {
+        document._gamey.kill_all();
+        log_console(document._gamey.langs[lang]["stopped"], "rgb(255, 0, 0)");
+    }
+    const log_console = (msg, color) => {
+        const list = document.getElementById("terminal-list");
+        list.innerHTML = list.innerHTML + "<span style='color: " + (color || "#ffffff") + "'>" + msg.replaceAll("<", "&zwnj;<").replaceAll("<", "<&zwnj;") + "</span><br>";
+        list.scrollTop = list.scrollHeight;
+    }
+    const clear_console = () => document.getElementById("terminal-list").innerHTML = "";
+    const start_compile = () => {
+        if (document._gamey.any_alive_process()) return;
+        document._gamey.kill_all();
+        const compiler = new document._gamey.Compiler(code_area.value.split("\n"));
+        open_terminal();
+        compiler.on("on_print", text => document._gamey.any_alive_process() ? log_console(text) : null);
+        compiler.on("on_stop", () => log_console(document._gamey.langs[lang]["stopped"], "rgb(255, 0, 0)"));
+        compiler.on("on_end", () => log_console(document._gamey.langs[lang]["ended"], "rgb(255, 255, 0)"));
+        compiler.on("on_error", err => log_console(translation[lang]["error"] + ": " + err, "rgb(255, 0, 0)"));
+        compiler.on("on_clear", () => clear_console());
+        compiler.compile();
+    }
+    const terminal = document.getElementById("terminal");
+    const toggle_terminal = () => {
+        if (terminal.classList.contains("terminal-open")) return close_terminal();
+        open_terminal();
+    }
+    const open_terminal = () => {
+        document.getElementById("open_terminal").classList.add("hidden");
+        document.getElementById("close_terminal").classList.remove("hidden");
+        terminal.classList.add("terminal-open");
+        document.getElementById("terminal-list").hidden = undefined;
+    }
+    const close_terminal = () => {
+        document.getElementById("open_terminal").classList.remove("hidden");
+        document.getElementById("close_terminal").classList.add("hidden");
+        terminal.classList.remove("terminal-open");
+        document.getElementById("terminal-list").hidden = true;
+    }
+    let held_keys = {};
+    let terminal_shortcut = false;
+    addEventListener("keydown", ev => {
+        held_keys[ev.key] = true;
+        if (held_keys["\""] && held_keys["Control"]) {
+            if (!terminal_shortcut) {
+                terminal_shortcut = true;
+                toggle_terminal();
+            }
+        } else terminal_shortcut = false;
+    });
+    addEventListener("keyup", ev => delete held_keys[ev.key]);
+    setInterval(() => {
+        document.getElementById("stop_all").disabled = document._gamey.any_alive_process() ? undefined : true;
+        document.getElementById("start_compile").disabled = document._gamey.any_alive_process() ? true : undefined;
+    });
+    setInterval(() => {
+        if (PROJECT.code !== code_area.value) {
+            PROJECT.code = code_area.value;
+            document.ProjectAPI.update_project_code(PROJECT_NAME, PROJECT.code);
+        }
+    }, 5000);
+    const translation = {
+        en_US: {
+            "exit": "Save & Exit",
+            "stop_all": "Stop",
+            "start_compile": "Start",
+            "error": "Error",
+            "console": "Console"
+        },
+        tr_TR: {
+            "exit": "Kaydet & Çık",
+            "stop_all": "Durdur",
+            "start_compile": "Başlat",
+            "error": "Hata",
+            "console": "Console"
+        }
+    };
+    const create_popup = content => {
+        document.getElementById("popup").hidden = undefined;
+        document.getElementById("popup-content").innerHTML = content;
+    };
+    const close_popup = () => {
+        document.getElementById("popup").hidden = true;
+        document.getElementById("popup-content").innerHTML = "";
+    }
+    addEventListener("keydown", ev => ev.key === "Escape" ? close_popup() : null)
+    window.load_start = () => {
+        document.getElementById("NAME").innerHTML = NAME;
+        document.getElementById("exit").innerHTML = translation[lang]["exit"];
+        document.getElementById("stop_all").innerHTML = translation[lang]["stop_all"];
+        document.getElementById("start_compile").innerHTML = translation[lang]["start_compile"];
+        document.getElementById("LNG-console").innerHTML = translation[lang]["console"];
+        // noinspection JSValidateTypes
+        document.getElementById("terminal-toggle").style = "cursor: pointer;width: " + (25 + (translation[lang]["console"].length * 8)) + "px";
+        document.getElementById("start").hidden = true;
+    }
+</script>
+<style>
+    @font-face {
+        font-family: ProximaNova;
+        src: url("Proxima Nova Font.otf") format("opentype");
+    }
+
+    .clear {
+        position: absolute;
+        right: 5px;
+        top: 0;
+        width: 1.8%;
+        cursor: pointer;
+    }
+
+    .terminal-list {
+        position: absolute;
+        padding: 1%;
+        width: 98%;
+        height: 80%;
+        overflow-y: auto;
+    }
+
+    .terminal {
+        position: absolute;
+        left: 0;
+        bottom: 0;
+        width: 99.8%;
+        background: #232323;
+        opacity: 90%;
+        height: 20px;
+    }
+
+    .terminal-open {
+        height: 29.7%;
+    }
+
+    .hidden {
+        opacity: 0;
+    }
+
+    .buttons {
+        position: absolute;
+        right: 50px;
+        top: 25px;
+    }
+
+    .btn {
+        margin-left: 10px;
+        background: #2b2b2b;
+        font-weight: normal;
+        font-size: 25px;
+        padding: 10px;
+        border: 1px solid white;
+        border-radius: 3px;
+        box-shadow: 2px 2px;
+        cursor: pointer;
+    }
+
+    .btn:hover {
+        background: #232323;
+    }
+
+    .btn:disabled {
+        opacity: 50%;
+        cursor: default;
+    }
+
+    ::-webkit-scrollbar {
+        width: 10px;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: #f1f1f1;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: #888;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        background: #555;
+    }
+
+    .code {
+        font-family: Consolas, Courier New, monospace;
+        font-weight: normal;
+        letter-spacing: 0;
+        line-height: 19px;
+        font-size: 14px;
+        border: none;
+        border-radius: 10px;
+        width: 97%;
+        height: 100%;
+        overflow-y: auto;
+        overflow-x: auto;
+        min-height: 80%;
+        max-height: 80%;
+        background: #232323;
+    }
+
+    .lines {
+        border-right: 1px solid white;
+        position: absolute;
+        padding-left: 1%;
+        padding-right: 1%;
+        min-width: 1%;
+        height: 78.4%;
+        text-align: center;
+    }
+
+    .code_area {
+        font-family: Consolas, Courier New, monospace;
+        font-weight: normal;
+        letter-spacing: 0;
+        line-height: 19px;
+        font-size: 14px;
+        position: relative;
+        margin-left: 4%;
+        min-width: 87%;
+        max-width: 87%;
+        min-height: 78%;
+        max-height: 78%;
+        background: none;
+        border: none;
+    }
+
+    .container {
+        padding-top: 20px;
+        padding-left: 30px;
+    }
+
+    .popup {
+        position: absolute;
+        width: 60%;
+        height: 60%;
+        background: #232323;
+        border-radius: 8px;
+        left: 20%;
+        opacity: 97%;
+    }
+
+    .popup-contents {
+        padding: 30px;
+    }
+
+    .popup-close {
+        position: absolute;
+        right: 0;
+        top: 0;
+        background: #e81123;
+        cursor: pointer;
+    }
+
+    .popup-close:hover {
+        background: #b00b1a;
+    }
+
+    .popup-container {
+        position: absolute;
+        width: 98%;
+        height: 74%;
+    }
+
+    * {
+        user-select: none;
+        color: white;
+        font-weight: bolder;
+        font-family: ProximaNova, serif;
+    }
+</style>
