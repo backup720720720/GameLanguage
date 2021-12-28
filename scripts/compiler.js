@@ -119,6 +119,7 @@ let NAME = "";
      * DONE: normal variables - NAME = VAR
      * DONE: constant variables - *NAME = VAR;
      * DONE: += -= *= /=
+     * TODO: ++ --
      * DONE: repeat(STATEMENT) - Doesn't freeze and repeats until its statement gets false
      * DONE: repeat_wait(STATEMENT) - Freezes line and repeats until its statement gets false
      * DONE: repeat_always {} - Repeats always
@@ -151,11 +152,21 @@ let NAME = "";
         string(args, compiler) {
             throw new CompilerError(langs[lang]["invalid-type"]);
         }
+
+        clone() {
+            throw new Error();
+            // noinspection UnreachableCodeJS
+            return null;
+        }
     }
 
     class _Raw extends Type {
         string() {
             return this.a;
+        }
+
+        clone() {
+            return new _Raw(this.a);
         }
     }
 
@@ -163,11 +174,19 @@ let NAME = "";
         string() {
             return JSON.stringify(this.a);
         }
+
+        clone() {
+            return new _String(this.a);
+        }
     }
 
     class _Number extends Type {
         string() {
             return this.a;
+        }
+
+        clone() {
+            return new _Number(this.a);
         }
     }
 
@@ -204,6 +223,15 @@ let NAME = "";
         run(args, compiler) {
 
         }
+
+        clone() {
+            const callable = new _Callable(this.a, this.args);
+            callable.getName = this.getName;
+            callable.set_callback_from_code = this.set_callback_from_code;
+            callable.string = this.string;
+            callable.run = this.run;
+            return callable;
+        }
     }
 
     class _Null extends Type {
@@ -213,6 +241,10 @@ let NAME = "";
 
         string() {
             return "";
+        }
+
+        clone() {
+            return new _Null();
         }
     }
 
@@ -231,10 +263,14 @@ let NAME = "";
 
         string(args, compiler) {
             const c = DEFAULT_FUNCTIONS.find(i => i.prototype.getName() === this.a);
-            let a = compiler.get_variable(this.a) || c;
+            let a = compiler.get_variable(this.a) || c.string(c.args, compiler);
             if (!a) return _err(langs[lang]["not-defined-variable"].replace("%0", this.a), compiler);
-            if (!a[0]) a = [a];
-            return a.map(i => i instanceof _Callable ? i.string(i.args, compiler) : i.string(null, compiler)).join("");
+            if (a instanceof _Callable || a.prototype instanceof _Callable) a = a.string(args, compiler);
+            return a;
+        }
+
+        clone() {
+            return new _Variable(this.a, this.args);
         }
     }
 
@@ -310,17 +346,17 @@ let NAME = "";
         const name = args[0];
         let setting = args[1];
         const old_var = compiler.get_variable(name);
+        if ((compiler.variables[name] && compiler.variables[name].constant) || DEFAULT_FUNCTIONS.find(i => i.prototype.getName() === name)) return _err(langs[lang]["const-var"], compiler);
         const _c = () => {
             return _err(langs[lang]["not-defined-variable"].replace("%0", name), compiler);
         };
         const is_constant = args[2] === "true";
         if (args[3] !== "=") {
             if (!old_var) _c();
-            setting = "(" + old_var.map(i => i.string()).join("") + ")" + args[3] + "(" + setting + ")";
+            setting = "(" + old_var + ")" + args[3] + "(" + setting + ")";
         }
         setting = compile_auto(setting, compiler);
-        if ((compiler.variables[name] && compiler.variables[name].constant) || DEFAULT_FUNCTIONS.find(i => i.prototype.getName() === name)) return _err(langs[lang]["const-var"], compiler);
-        compiler.set_variable(name, setting.map(i => i instanceof _Callable ? i.run(i.args, compiler) : i), is_constant);
+        compiler.set_variable(name, setting.map(i => i instanceof _Callable ? i.run(i.args, compiler) : i).map(i => i.string(i.args, compiler)).join(""), is_constant);
         return new _Null();
     });
 
@@ -378,15 +414,15 @@ let NAME = "";
     ];
 
     const additions = ["pow", "floor", "sqrt", "abs"];
-    /*** @type {{name: string, value: Type[]}[]} */
+    /*** @type {{name: string, value: string}[]} */
     const initial_variables = [
-        {name: "true", value: [new _Number(1)]},
-        {name: "false", value: [new _Number(0)]},
-        {name: "null", value: [new _Number(0)]}
+        {name: "true", value: "1"},
+        {name: "false", value: "0"},
+        {name: "null", value: "0"}
     ];
     ["E", "LN10", "LN2", "LOG10E", "LOG2E", "PI", "SQRT1_2", "SQRT2"].forEach(i => initial_variables.push({
         name: i,
-        value: [new _Number(Math[i])]
+        value: Math[i].toString()
     }))
 
     const other_math = [
@@ -419,13 +455,16 @@ let NAME = "";
         let d = b.split("").slice(0, b.length).join("");
         let e = split_function_parameters(d).map(i => clear_spaces(i));
         const f = DEFAULT_FUNCTIONS.find(i => i.prototype.getName() === name);
-        let g = compiler.get_variable(name) ? compiler.get_variable(name)[0] : f;
-        if (!g || !(g.prototype instanceof _Callable)) return _err(langs[lang]["not-defined-variable"].replace("%0", name), compiler);
-        return new g(name, e.map(j => compile_auto(j, compiler).map(i => {
+        let g = compiler.get_variable(name) || f;
+        if (!g || (!(g instanceof _Callable) && !(g.prototype instanceof _Callable))) return _err(langs[lang]["not-defined-variable"].replace("%0", name), compiler);
+        const func_args = e.map(j => compile_auto(j, compiler).map(i => {
             const st = i.string(i.args, compiler);
             if (st instanceof Promise) return _err(langs[lang]["cannot-wait-func"], compiler);
             return st;
-        }).join("")));
+        }).join(""));
+        if (g.prototype instanceof _Callable) g = new g(name, func_args);
+        g.args = func_args;
+        return g;
     }
 
     function is_string(str) {
@@ -451,7 +490,7 @@ let NAME = "";
         return str;
     }
 
-    const symbols = [..."+-*/%()<>", "==", "!=", "<=", "=>", "!", "&&", "||", "?", ":"];
+    const symbols = [..."+-*/%()<>", "==", "!=", "<=", "=>", "=<", ">=", "!", "&&", "||", "?", ":"];
 
     /**
      * @param {string} string
@@ -514,14 +553,14 @@ let NAME = "";
                 str_stat = clean[0];
                 continue;
             }
-            if (symbols.includes(clean)) {
+            if (symbols.includes(clean) && !symbols.includes(clean + string[index + 1])) {
                 res.push(new _Raw(clean));
                 symbol_current = false;
                 add = "";
                 continue;
             }
             if (symbols.some(i => i.startsWith(clean))) {
-                symbol_current = true;
+                symbol_current = clean;
                 continue;
             }
             if (!clean.replace(/ /g, "").split("").some(i => ![..."1234567890."].includes(i))) {
@@ -581,7 +620,7 @@ let NAME = "";
                             break;
                         }
                         if (!string_reg.test(h)) {
-                            indexVar = j;
+                            indexVar = j - 1;
                             break;
                         }
                     }
@@ -594,7 +633,7 @@ let NAME = "";
                 func_end = func_end_check;
             } else if (can_be_var) {
                 var_wait = indexVar * 1;
-                if (!indexVar) {
+                if (indexVar === null) {
                     let cl = clear_spaces(string.split("").slice(index).join(""));
                     res.push(new _Variable(cl));
                     break;
@@ -826,7 +865,7 @@ let NAME = "";
         constructor(lines) {
             this.uuid = __uuid++;
             document._compilers[this.uuid] = this;
-            /*** @type {Object<any, {constant: boolean, value: Type[]}>}} */
+            /*** @type {Object<any, {constant: boolean, value: string | Type}>}} */
             this.variables = {};
             this.sets = {};
             initial_variables.forEach(i => this.variables[i.name] = {constant: true, value: i.value})
@@ -869,15 +908,15 @@ let NAME = "";
 
         /**
          * @param v
-         * @return {Type[]|null}
+         * @return {string|_Callable|null}
          */
         get_variable(v) {
-            return this.variables[v] ? this.variables[v].value : null;
+            return this.variables[v] ? (this.variables[v].value instanceof Type ? this.variables[v].value.string(this.variables[v].value.args, this) : this.variables[v].value) : null;
         }
 
         /**
          * @param {string} v
-         * @param {Type[]} a
+         * @param {string} a
          * @param {boolean?} c
          */
         set_variable(v, a, c = false) {
@@ -1021,11 +1060,13 @@ let NAME = "";
                     let type_var = null;
                     let con_var = false;
                     let es = clear_spaces(line);
+                    let var_is_multiple = false;
                     for (let j = 0; j < es.length; j++) {
                         let k = es[j];
                         let l = es[j + 1];
-                        if (k === "=" || (k === "+" && l === "=") || (k === "-" && l === "=") || (k === "*" && l === "=") || (k === "/" && l === "=")) {
+                        if (k === "=" || (k === "+" && (l === "=" || l === "+")) || (k === "-" && (l === "=" || l === "-")) || (k === "*" && l === "=") || (k === "/" && l === "=")) {
                             type_var = k;
+                            var_is_multiple = k !== "=" && (l === "+" || l === "-");
                             index_var = k === "=" ? j + 1 : j + 2;
                             var_check = true;
                             break;
@@ -1042,7 +1083,7 @@ let NAME = "";
                     if (var_check) {
                         name_var = clear_spaces(name_var);
                         while (name_var.startsWith("*")) name_var = name_var.split("").slice(1).join("");
-                        let setting = clear_spaces(es.split("").slice(index_var).join(""));
+                        const setting = var_is_multiple ? 1 : clear_spaces(es.split("").slice(index_var).join(""));
                         const sid = _set_id++;
                         this.sets[sid] = [name_var, setting, con_var ? "true" : "false", type_var];
                         return this.add_line(new Line(`__set__(${sid})`));
