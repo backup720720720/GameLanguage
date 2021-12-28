@@ -1,6 +1,6 @@
 <script src="scripts/project-api.js"></script>
 <script src="scripts/compiler.js"></script>
-<textarea id="code" onchange="localStorage.setItem('code', document.getElementById('code').value)"></textarea>
+<textarea spellcheck="false" style="outline: none" id="code" onchange="localStorage.setItem('code', document.getElementById('code').value)"></textarea>
 <br>
 <button onclick="document._gamey.compile(document.getElementById('code').value)">Compile</button>
 <script>
