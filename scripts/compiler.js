@@ -119,7 +119,7 @@ let NAME = "";
      * DONE: normal variables - NAME = VAR
      * DONE: constant variables - *NAME = VAR;
      * DONE: += -= *= /=
-     * TODO: ++ --
+     * DONE: ++ --
      * DONE: repeat(STATEMENT) - Doesn't freeze and repeats until its statement gets false
      * DONE: repeat_wait(STATEMENT) - Freezes line and repeats until its statement gets false
      * DONE: repeat_always {} - Repeats always
