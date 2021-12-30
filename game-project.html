@@ -99,8 +99,12 @@
         log_console(gamey.langs[lang]["stopped"], "rgb(255, 0, 0)");
     }
     const log_console = (msg, color) => {
-        console_text_text.innerHTML = console_text_text.innerHTML + "<span style='color: " + (color || "#ffffff") + "'>" + msg.toString().replaceAll("<", "&zwnj;<").replaceAll("<", "<&zwnj;") + "</span><br>";
-        console_text_text.scrollTop = console_text_text.scrollHeight;
+        logf_console(msg, color, true);
+    }
+    const logf_console = (msg, color, line) => {
+        const list = document.getElementById("toolbar-console-text");
+        list.innerHTML = list.innerHTML + "<span style='color: " + (color || "#ffffff") + "'>" + msg.toString().replaceAll("<", "&zwnj;<").replaceAll("<", "<&zwnj;") + "</span>" + (line ? "<br>" : "");
+        list.scrollTop = list.scrollHeight;
     }
     const clear_console = () => console_text_text.innerHTML = "";
     const start_compile = () => {
@@ -111,6 +115,7 @@
         const compiler = new gamey.Compiler(code_area.value.split("\n"));
         open_game_area();
         compiler.on("on_print", text => gamey.any_alive_process() ? log_console(text) : null);
+        compiler.on("on_printf", text => gamey.any_alive_process() ? logf_console(text) : null);
         compiler.on("on_stop", () => log_console(gamey.langs[lang]["stopped"], "rgb(255, 0, 0)"));
         compiler.on("on_end", () => log_console(gamey.langs[lang]["ended"], "rgb(255, 255, 0)"));
         compiler.on("on_error", err => log_console(translation[lang]["error"] + ": " + err, "rgb(255, 0, 0)"));
