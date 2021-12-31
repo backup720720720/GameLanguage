@@ -279,7 +279,7 @@ let NAME = "";
         }
 
         async string() {
-            return await this.a;
+            return (await this.a).string();
         }
 
         clone() {
@@ -365,7 +365,7 @@ let NAME = "";
                 return name();
             }
 
-            run(args, compiler) {
+            async run(args, compiler) {
                 return run(args, compiler);
             }
         }
