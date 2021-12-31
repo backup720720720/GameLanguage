@@ -21,6 +21,7 @@ let NAME = "";
             "invalid-type": "Invalid type",
             "not-defined-variable": "Variable '%0' haven't defined",
             "print": "print",
+            "printf": "printf",
             "wait": "wait",
             "wait-number": "Wait function should include number argument",
             "wait-ms": "wait_ms",
@@ -65,7 +66,8 @@ let NAME = "";
             "data-remove-error": "First argument of data_remove should be type of string",
             "console-key-down": "console_key_down",
             "console-key-down-error": "First argument of console_key_down should be type of string",
-            "console-readline": "read_line"
+            "console-readline": "read_line",
+            "console-readkey": "read_key"
         },
         tr_TR: {
             "Line": "Sat\u0131r",
@@ -74,6 +76,7 @@ let NAME = "";
             "invalid-type": "Ge\u00e7ersiz t\u00fcr",
             "not-defined-variable": "'%0' de\u011fi\u015fkeni tan\u0131mlanmad\u0131",
             "print": "yazd\u0131r",
+            "printf": "yazd\u0131rf",
             "wait": "bekle",
             "wait-number": "Bekle fonksiyonu say\u0131 arg\u00fcman\u0131 i\u00e7ermeli",
             "wait-ms": "bekle_ms",
@@ -118,7 +121,8 @@ let NAME = "";
             "data-remove-error": "Veri_sil fonksiyonunun ilk arg\u00fcman\u0131 yaz\u0131 tipinde olmal\u0131",
             "console-key-down": "konsol_basılı_tuş",
             "console-key-down-error": "Konsol_basılı_tuş fonksiyonunun ilk arg\u00fcman\u0131 yaz\u0131 tipinde olmal\u0131",
-            "console-readline": "satır_oku"
+            "console-readline": "satır_oku",
+            "console-readkey": "harf_oku"
         }
     };
 
@@ -459,6 +463,10 @@ let NAME = "";
             args.forEach(i => compiler.emit("on_print", _eval(i)));
             return new _Null();
         }),
+        generate_function(() => langs[lang]["printf"], (args, compiler) => {
+            args.forEach(i => compiler.emit("on_printf", _eval(i)));
+            return new _Null();
+        }),
         generate_function(() => langs[lang]["wait"], (args) => {
             if (!args[0] * 1) return _err(langs[lang]["wait-number"], compiler);
             return new _Promise(new Promise((a) => setTimeout(() => a(new _Null()), args[0] * 1 * 1000)));
@@ -543,6 +551,7 @@ let NAME = "";
                         break;
                     case "Backspace":
                         compiler.emit("on_backspace");
+                        console_read_line.complete = console_read_line.complete.split("").slice(0, console_read_line.complete.length - 1).join("");
                         break;
                 }
             }
@@ -1265,6 +1274,7 @@ let NAME = "";
         }
 
         compile(next) {
+            this.emit("on_print", "");
             this.end_func = next || (() => {
                 if (Object.keys(this.loops).length === 0) this.emit("on_end");
             });

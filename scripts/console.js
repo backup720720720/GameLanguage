@@ -3,10 +3,11 @@
         constructor(text, color = "#ffffff") {
             this.text = text;
             this.color = color;
+            this.stack = 1;
         }
 
         toString() {
-            return "<span style='color: " + (this.color) + "'>" + this.text.toString().replaceAll("<", "&zwnj;<&zwnj;").replaceAll(">", "&zwnj;>&zwnj;") + "</span><br>";
+            return (this.stack > 1 ? "[x" + this.stack + "] " : "") + "<span style='color: " + (this.color) + "'>" + this.text.toString().replaceAll("<", "&zwnj;<&zwnj;").replaceAll(">", "&zwnj;>&zwnj;") + "</span><br>";
         }
     }
     class Console {
@@ -15,13 +16,18 @@
             this.lines = [];
         }
 
+        _last() {
+            return this.lines[this.lines.length - 1];
+        }
+
         log(text, color) {
-            this.lines.push(new ConsoleLine(text, color));
+            if(this._last() && this._last().text === text) this._last().stack++;
+            else this.lines.push(new ConsoleLine(text, color));
             this.render();
         }
 
         logf(text, color) {
-            this.lines[this.lines.length - 1].text += text;
+            this._last().text += text;
             this.render();
         }
 
@@ -32,7 +38,7 @@
 
         backspace() {
             const lines = this.lines.filter(i=> i.color === "#ffffff");
-            const last = lines[lines.length - 1];
+            const last = this._last();
             if(last && last.text) {
                 last.text = last.text.substring(0, last.text.length - 1);
                 this.render();
