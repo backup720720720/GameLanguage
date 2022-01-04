@@ -306,7 +306,7 @@ let NAME = "";
 
         async string(args, compiler) {
             const c = DEFAULT_FUNCTIONS.find(i => i.prototype.getName() === this.a);
-            let a = await compiler.get_variable(this.a) || await c.string(c.args, compiler);
+            let a = await compiler.get_variable(this.a) || (c ? await c.string(c.args, compiler) : null);
             if (!a) return _err(langs[lang]["not-defined-variable"].replace("%0", this.a), compiler);
             if (a instanceof _Callable || a.prototype instanceof _Callable) a = await a.string(args, compiler);
             return a;
