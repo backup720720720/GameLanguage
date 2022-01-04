@@ -573,15 +573,23 @@ let NAME = "";
 
     const additions = ["pow", "floor", "sqrt", "abs"];
     /*** @type {{name: string, value: string}[]} */
-    const initial_variables = [
-        { name: langs[lang]["true"], value: "1" },
-        { name: langs[lang]["false"], value: "0" },
-        { name: "null", value: "0" }
-    ];
-    ["E", "LN10", "LN2", "LOG10E", "LOG2E", "PI", "SQRT1_2", "SQRT2"].forEach(i => initial_variables.push({
-        name: i,
-        value: Math[i].toString()
-    }))
+    let initial_variables = [];
+    let load = setTimeout(() => {
+        initial_variables = [
+            { name: langs[lang]["true"], value: "1" },
+            { name: langs[lang]["false"], value: "0" },
+            { name: "null", value: "0" }
+        ];
+        ["E", "LN10", "LN2", "LOG10E", "LOG2E", "PI", "SQRT1_2", "SQRT2"].forEach(i => initial_variables.push({
+            name: i,
+            value: Math[i].toString()
+        }))
+        document.defaults = {
+            functions: DEFAULT_FUNCTIONS.map(i => {
+                return { name: i.prototype.getName() };
+            }), variables: initial_variables, statements: ["if", "else", "repeat", "repeat_wait", "repeat_times", "repeat_times_wait", "repeat_always"].map(i => { return { name: langs[lang][i] } })
+        };
+    }, 500);
 
     const other_math = [
         "cos", "exp", "acos", "acosh", "asin", "asinh", "log", "atan", "atan2", "atanh", "cbrt",
@@ -591,11 +599,6 @@ let NAME = "";
 
     additions.forEach(i => DEFAULT_FUNCTIONS.push(generate_math_function(i, () => langs[lang][i])));
     other_math.forEach(i => DEFAULT_FUNCTIONS.push(generate_math_function(i)));
-    document.defaults = {
-        functions: DEFAULT_FUNCTIONS.map(i => {
-            return { name: i.prototype.getName() };
-        }), variables: initial_variables, statements: ["if", "else", "repeat", "repeat_wait", "repeat_times", "repeat_times_wait", "repeat_always"].map(i => { return { name: langs[lang][i] } })
-    };
 
     /**.
      * @param {string} str

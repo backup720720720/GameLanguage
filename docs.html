@@ -31,12 +31,6 @@
 
 </html>
 <script>
-    const infos = [
-        {
-            title: "clear",
-            description: "test2"
-        }
-    ];
     function open_text(i) {
         const t = document.getElementById("text" + i);
         t.hidden = undefined;
@@ -47,7 +41,52 @@
     }
     const translation = {
         "en_US": {
-            "projects": "View projects"
+            "projects": "View projects",
+            "infos": {
+                "clear": {
+                    description: "Clears console",
+                    usage: null,
+                    returns: "null"
+                },
+                "random": {
+                    description: "Generates a random number between input numbers",
+                    usage: [
+                        {
+                            name: "minimumValue",
+                            required: true,
+                            type: "int"
+                        },
+                        {
+                            name: "maximumValue",
+                            required: true,
+                            type: "int"
+                        }
+                    ],
+                    returns: "int"
+                },
+                "csc": {
+                    description: "Returns hypotenuse over opposite side",
+                    usage: [
+                        {
+                            name: "value",
+                            required: true,
+                            type: "number"
+                        }
+                    ],
+                    returns: "int"
+                },
+                "csc": {
+                    description: "Returns hypotenuse over opposite side",
+                    usage: [
+                        {
+                            name: "value",
+                            required: true,
+                            type: "number"
+                        }
+                    ],
+                    returns: "int"
+                },
+            }
         },
         "tr_TR": {
             "projects": "Projeleri görüntüle"
@@ -55,7 +94,7 @@
     };
     let NAME = "";
     window.load_start = () => {
-        document.getElementById("infos").innerHTML = infos.map((i,a)=> `<div class="info">
+        document.getElementById("infos").innerHTML = translation[lang].infos.map((i, a) => `<div class="info">
                     <div class="title">${i.title}</div>
                     <div class="description" onmouseover="open_text(${a})" onmouseout="close_text(${a})">
                     </div>
