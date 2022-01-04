@@ -369,7 +369,7 @@ let NAME = "";
                 return name();
             }
 
-            async run(args, compiler) {
+            run(args, compiler) {
                 return run(args, compiler);
             }
         }
@@ -454,7 +454,6 @@ let NAME = "";
             return new _Number(1 / Math.cos(args));
         }),
         generate_function(() => "cot", (args) => {
-            ""
             args = _eval(args[0]) * 1;
             if (isNaN(args)) return _err(langs[lang]["nan-error"], compiler);
             return new _Number(1 / Math.tan(args));
@@ -521,12 +520,12 @@ let NAME = "";
         generate_function(() => langs[lang]["console-readline"], (args, compiler) => {
             compiler.emit("on_print", "");
             return new _Promise(new Promise(r => {
-                console_read_line = { compiler, r, complete: "" };
+                console_read_line = {compiler, r, complete: ""};
             }));
         }),
         generate_function(() => langs[lang]["console-readkey"], (args, compiler) => {
             return new _Promise(new Promise(r => {
-                console_read_key = { compiler, r };
+                console_read_key = {compiler, r};
             }));
         })
     ];
@@ -540,7 +539,7 @@ let NAME = "";
             if (!toggled_console) return;
             console_held_keys[ev.key] = true;
             if (console_read_line) {
-                const { compiler } = console_read_line;
+                const {compiler} = console_read_line;
                 if (ev.key.length === 1) {
                     compiler.emit("on_printf", ev.key);
                     console_read_line.complete += ev.key;
@@ -556,7 +555,7 @@ let NAME = "";
                 }
             }
             if (console_read_key) {
-                const { compiler } = console_read_key;
+                const {compiler} = console_read_key;
                 if (ev.key.length === 1) {
                     compiler.emit("on_printf", ev.key);
                     console_read_key.r(new _String(ev.key));
@@ -576,9 +575,9 @@ let NAME = "";
     let initial_variables = [];
     let load = setTimeout(() => {
         initial_variables = [
-            { name: langs[lang]["true"], value: "1" },
-            { name: langs[lang]["false"], value: "0" },
-            { name: "null", value: "0" }
+            {name: langs[lang]["true"], value: "1"},
+            {name: langs[lang]["false"], value: "0"},
+            {name: "null", value: "0"}
         ];
         ["E", "LN10", "LN2", "LOG10E", "LOG2E", "PI", "SQRT1_2", "SQRT2"].forEach(i => initial_variables.push({
             name: i,
@@ -586,8 +585,12 @@ let NAME = "";
         }))
         document.defaults = {
             functions: DEFAULT_FUNCTIONS.map(i => {
-                return { name: i.prototype.getName() };
-            }), variables: initial_variables, statements: ["if", "else", "repeat", "repeat_wait", "repeat_times", "repeat_times_wait", "repeat_always"].map(i => { return { name: langs[lang][i] } })
+                return {name: i.prototype.getName()};
+            }),
+            variables: initial_variables,
+            statements: ["if", "else", "repeat", "repeat_wait", "repeat_times", "repeat_times_wait", "repeat_always"].map(i => {
+                return {name: langs[lang][i]}
+            })
         };
     }, 500);
 
@@ -666,7 +669,7 @@ let NAME = "";
     /**
      * @param {string} string
      * @param {Compiler} compiler
-     * @returns {Type[]}
+     * @returns {Promise<Type[]>}
      */
     async function compile_auto(string, compiler) {
         let str_stat = null;
@@ -857,8 +860,8 @@ let NAME = "";
             this.line = line;
         }
 
-        run(next, compiler, val) {
-            compile_line(this.line, next, compiler, val);
+        async run(next, compiler, val) {
+            await compile_line(this.line, next, compiler, val);
         }
     }
 
@@ -920,7 +923,7 @@ let NAME = "";
         }
 
         async run(next, compiler, val) {
-            let statement = await compile_auto(this.statement, compiler).map(async i => await i.string(null, compiler)).join("");
+            let statement = (await compile_auto(this.statement, compiler)).map(async i => await i.string(null, compiler)).join("");
             if (_eval(statement)) await super.run(next, compiler, val);
             else next();
         }
@@ -943,7 +946,7 @@ let NAME = "";
         run(next, compiler) {
             const runtime_id = _loop_runtime_id++;
             compiler.add_loop(this, runtime_id);
-            const statement = async () => await compile_auto(this.statement, compiler).map(async i => await i.string(null, compiler)).join("");
+            const statement = async () => (await compile_auto(this.statement, compiler)).map(async i => await i.string(null, compiler)).join("");
             const run = async () => {
                 if (_eval(await statement())) {
                     await super.run(() => setTimeout(() => run(), 1), compiler);
@@ -965,7 +968,7 @@ let NAME = "";
         async run(next, compiler) {
             const runtime_id = _loop_runtime_id++;
             compiler.add_loop(this, runtime_id);
-            const statement = async () => await compile_auto(this.statement, compiler).map(async i => await i.string(null, compiler)).join("");
+            const statement = async () => (await compile_auto(this.statement, compiler)).map(async i => await i.string(null, compiler)).join("");
             const run = async () => {
                 if (_eval(statement())) {
                     await super.run(() => setTimeout(() => run(), 1), compiler);
@@ -974,7 +977,7 @@ let NAME = "";
                     next(true);
                 }
             }
-            run();
+            await run();
         }
     }
 
@@ -1040,7 +1043,7 @@ let NAME = "";
             /*** @type {Object<any, {constant: boolean, value: string | Type}>}} */
             this.variables = {};
             this.sets = {};
-            initial_variables.forEach(i => this.variables[i.name] = { constant: true, value: i.value })
+            initial_variables.forEach(i => this.variables[i.name] = {constant: true, value: i.value})
             /*** @type {Line[]} */
             this.line_alg = [];
             this.start(lines);
@@ -1096,7 +1099,7 @@ let NAME = "";
          * @param {boolean?} c
          */
         set_variable(v, a, c = false) {
-            this.variables[v] = { constant: c, value: a };
+            this.variables[v] = {constant: c, value: a};
         }
 
         get_last_multiple_line() {
@@ -1362,7 +1365,8 @@ let NAME = "";
             if (def) {
                 compiler.on("on_print", text => console.info(text));
                 compiler.on("on_printf", text => console.info(text));
-                compiler.on("on_backspace", () => { });
+                compiler.on("on_backspace", () => {
+                });
                 compiler.on("on_stop", () => console.info("%c" + langs[lang]["stopped"], 'color: rgb(255, 0, 0)'));
                 compiler.on("on_end", () => console.info('%c' + langs[lang]["ended"], 'color: rgb(255, 255, 0)'));
                 compiler.on("on_error", err => {

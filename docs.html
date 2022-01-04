@@ -1,3 +1,4 @@
+<!--suppress JSNonASCIINames, NonAsciiCharacters -->
 <html lang="en">
 
 <head>
@@ -5,28 +6,28 @@
 </head>
 
 <body style="background: #2b2b2b">
-    <div class="container">
-        <h1 id="NAME"></h1>
-        <div class="create">
-            <h1 id="LNG-projects" class="btn" onclick="window.location.href = './projects.html'"></h1>
-        </div>
-        <div class="extra-pad infos scroll">
-            <div id="infos">
-            </div>
+<div class="container">
+    <h1 id="NAME"></h1>
+    <div class="create">
+        <h1 id="LNG-projects" class="btn" onclick="window.location.href = './projects.html'"></h1>
+    </div>
+    <div class="extra-pad infos scroll">
+        <div id="infos">
         </div>
     </div>
-    <div class="popup-container" id="popup" hidden>
-        <div class="popup">
-            <div class="popup-contents">
-                <div id="popup-content"></div>
-                <svg onclick="close_popup()" width="50" height="35" class="popup-close">
-                    <path d="M20 12 L30 22 Z" stroke="white"></path>
-                    <path d="M30 12 L20 22 Z" stroke="white"></path>
-                </svg>
-            </div>
+</div>
+<div class="popup-container" id="popup" hidden>
+    <div class="popup">
+        <div class="popup-contents">
+            <div id="popup-content"></div>
+            <svg onclick="close_popup()" width="50" height="35" class="popup-close">
+                <path d="M20 12 L30 22 Z" stroke="white"></path>
+                <path d="M30 12 L20 22 Z" stroke="white"></path>
+            </svg>
         </div>
     </div>
-    <div style="position: absolute;left:0;top:0;width:100%;height:100%;background:#232323" id="start"></div>
+</div>
+<div style="position: absolute;left:0;top:0;width:100%;height:100%;background:#232323" id="start"></div>
 </body>
 
 </html>
@@ -35,73 +36,760 @@
         const t = document.getElementById("text" + i);
         t.hidden = undefined;
     }
+
     function close_text(i) {
         const t = document.getElementById("text" + i);
         t.hidden = true;
     }
-    const translation = {
+
+    /**
+     * @type {Object<string, Object<string, {description: string, usage: {name: string, required: boolean, type: "string" | "integer" | "float" | "number" | "boolean" | "null" | "any"}[] | null, returns: "string" | "integer" | "float" | "number" | "boolean" | "null" | "any"}>>}
+     */
+    const infos = {
         "en_US": {
-            "projects": "View projects",
-            "infos": {
-                "clear": {
-                    description: "Clears console",
-                    usage: null,
-                    returns: "null"
-                },
-                "random": {
-                    description: "Generates a random number between input numbers",
-                    usage: [
-                        {
-                            name: "minimumValue",
-                            required: true,
-                            type: "int"
-                        },
-                        {
-                            name: "maximumValue",
-                            required: true,
-                            type: "int"
-                        }
-                    ],
-                    returns: "int"
-                },
-                "csc": {
-                    description: "Returns hypotenuse over opposite side",
-                    usage: [
-                        {
-                            name: "value",
-                            required: true,
-                            type: "number"
-                        }
-                    ],
-                    returns: "int"
-                },
-                "csc": {
-                    description: "Returns hypotenuse over opposite side",
-                    usage: [
-                        {
-                            name: "value",
-                            required: true,
-                            type: "number"
-                        }
-                    ],
-                    returns: "int"
-                },
+            "clear": {
+                description: "Clears console",
+                usage: null,
+                returns: "null"
+            },
+            "random": {
+                description: "Generates a random number between input numbers",
+                usage: [
+                    {
+                        name: "minimumValue",
+                        required: true,
+                        type: "integer"
+                    },
+                    {
+                        name: "maximumValue",
+                        required: true,
+                        type: "integer"
+                    }
+                ],
+                returns: "integer"
+            },
+            "print": {
+                description: "Prints the text with a new line",
+                usage: [
+                    {
+                        name: "text",
+                        required: true,
+                        type: "any"
+                    }
+                ],
+                returns: "null"
+            },
+            "printf": {
+                description: "Prints the text",
+                usage: [
+                    {
+                        name: "text",
+                        required: true,
+                        type: "any"
+                    }
+                ],
+                returns: "null"
+            },
+            "wait": {
+                description: "Waits",
+                usage: [
+                    {
+                        name: "seconds",
+                        required: true,
+                        type: "number"
+                    }
+                ],
+                returns: "null"
+            },
+            "wait_ms": {
+                description: "Waits in milliseconds",
+                usage: [
+                    {
+                        name: "milliseconds",
+                        required: true,
+                        type: "number"
+                    }
+                ],
+                returns: "null"
+            },
+            "stop": {
+                description: "Stops process",
+                usage: [],
+                returns: "null"
+            },
+            "data_set": {
+                description: "Sets variable to database",
+                usage: [
+                    {
+                        name: "data",
+                        required: true,
+                        type: "string"
+                    },
+                    {
+                        name: "value",
+                        required: true,
+                        type: "any"
+                    }
+                ],
+                returns: "null"
+            },
+            "data_get": {
+                description: "Gets variable from database",
+                usage: [
+                    {
+                        name: "data",
+                        required: true,
+                        type: "string"
+                    }
+                ],
+                returns: "null"
+            },
+            "data_remove": {
+                description: "Removes variable from database",
+                usage: [
+                    {
+                        name: "data",
+                        required: true,
+                        type: "string"
+                    }
+                ],
+                returns: "null"
+            },
+            "console_key_down": {
+                description: "Returns if the key is being pressed",
+                usage: [
+                    {
+                        name: "key",
+                        required: true,
+                        type: "string"
+                    }
+                ],
+                returns: "boolean"
+            },
+            "read_line": {
+                description: "Waits for input and enter in console",
+                usage: [],
+                returns: "string"
+            },
+            "read_key": {
+                description: "Waits for key in console",
+                usage: [],
+                returns: "string"
+            },
+            "create_entity": {
+                description: "Creates entity and returns it",
+                usage: [
+                    {
+                        name: "x",
+                        required: true,
+                        type: "number"
+                    },
+                    {
+                        name: "y",
+                        required: true,
+                        type: "number"
+                    }
+                ],
+                returns: "integer"
+            },
+            "create_image_model": {
+                description: "Creates image model and returns it",
+                usage: [
+                    {
+                        name: "entity",
+                        required: true,
+                        type: "integer"
+                    },
+                    {
+                        name: "name",
+                        required: true,
+                        type: "string"
+                    },
+                    {
+                        name: "url",
+                        required: true,
+                        type: "string"
+                    }
+                ],
+                returns: "integer"
+            },
+            "set_width": {
+                description: "Sets the width of entity",
+                usage: [
+                    {
+                        name: "entity",
+                        required: true,
+                        type: "integer"
+                    },
+                    {
+                        name: "width",
+                        required: true,
+                        type: "number"
+                    }
+                ],
+                returns: "null"
+            },
+            "set_height": {
+                description: "Sets the height of entity",
+                usage: [
+                    {
+                        name: "entity",
+                        required: true,
+                        type: "integer"
+                    },
+                    {
+                        name: "height",
+                        required: true,
+                        type: "number"
+                    }
+                ],
+                returns: "null"
+            },
+            "set_x": {
+                description: "Sets the x position of entity",
+                usage: [
+                    {
+                        name: "entity",
+                        required: true,
+                        type: "integer"
+                    },
+                    {
+                        name: "x",
+                        required: true,
+                        type: "number"
+                    }
+                ],
+                returns: "null"
+            },
+            "set_y": {
+                description: "Sets the y position of entity",
+                usage: [
+                    {
+                        name: "entity",
+                        required: true,
+                        type: "integer"
+                    },
+                    {
+                        name: "y",
+                        required: true,
+                        type: "number"
+                    }
+                ],
+                returns: "null"
+            },
+            "set_angle": {
+                description: "Sets the angle of entity",
+                usage: [
+                    {
+                        name: "entity",
+                        required: true,
+                        type: "integer"
+                    },
+                    {
+                        name: "angle",
+                        required: true,
+                        type: "number"
+                    }
+                ],
+                returns: "null"
+            },
+            "get_width": {
+                description: "Gets the width of entity",
+                usage: [
+                    {
+                        name: "entity",
+                        required: true,
+                        type: "integer"
+                    }
+                ],
+                returns: "null"
+            },
+            "get_height": {
+                description: "Gets the height of entity",
+                usage: [
+                    {
+                        name: "entity",
+                        required: true,
+                        type: "integer"
+                    }
+                ],
+                returns: "null"
+            },
+            "get_x": {
+                description: "Gets the x position of entity",
+                usage: [
+                    {
+                        name: "entity",
+                        required: true,
+                        type: "integer"
+                    }
+                ],
+                returns: "null"
+            },
+            "get_y": {
+                description: "Gets the y position of entity",
+                usage: [
+                    {
+                        name: "entity",
+                        required: true,
+                        type: "integer"
+                    }
+                ],
+                returns: "null"
+            },
+            "get_angle": {
+                description: "Gets the angle of entity",
+                usage: [
+                    {
+                        name: "entity",
+                        required: true,
+                        type: "integer"
+                    }
+                ],
+                returns: "null"
+            },
+            "key_down": {
+                description: "Returns if key is down",
+                usage: [
+                    {
+                        name: "key",
+                        required: true,
+                        type: "string"
+                    }
+                ],
+                returns: "boolean"
             }
         },
         "tr_TR": {
-            "projects": "Projeleri görüntüle"
+            "temizle": {
+                description: "Konsolu temizler",
+                usage: null,
+                returns: "null"
+            },
+            "rastgele": {
+                description: "Girilen sayılar arasında sayı oluşturur",
+                usage: [
+                    {
+                        name: "minimumSayı",
+                        required: true,
+                        type: "integer"
+                    },
+                    {
+                        name: "maksimumSayı",
+                        required: true,
+                        type: "integer"
+                    }
+                ],
+                returns: "integer"
+            },
+            "yazdır": {
+                description: "Yazıyı yeni satır ile yazdırır",
+                usage: [
+                    {
+                        name: "yazı",
+                        required: true,
+                        type: "any"
+                    }
+                ],
+                returns: "null"
+            },
+            "yazdırf": {
+                description: "Yazıyı yazdırır",
+                usage: [
+                    {
+                        name: "yazı",
+                        required: true,
+                        type: "any"
+                    }
+                ],
+                returns: "null"
+            },
+            "bekle": {
+                description: "Bekler",
+                usage: [
+                    {
+                        name: "saniye",
+                        required: true,
+                        type: "number"
+                    }
+                ],
+                returns: "null"
+            },
+            "bekle_ms": {
+                description: "Milisaniye cinsinden bekler",
+                usage: [
+                    {
+                        name: "milisaniye",
+                        required: true,
+                        type: "number"
+                    }
+                ],
+                returns: "null"
+            },
+            "durdur": {
+                description: "Programı durdurur",
+                usage: null,
+                returns: "null"
+            },
+            "veri_ayarla": {
+                description: "Veriyi veritabanına kaydeder",
+                usage: [
+                    {
+                        name: "veri",
+                        required: true,
+                        type: "string"
+                    },
+                    {
+                        name: "değer",
+                        required: true,
+                        type: "any"
+                    }
+                ],
+                returns: "null"
+            },
+            "veri_al": {
+                description: "Veriyi veritabanından alır",
+                usage: [
+                    {
+                        name: "veri",
+                        required: true,
+                        type: "string"
+                    }
+                ],
+                returns: "null"
+            },
+            "veri_sil": {
+                description: "Veriyi veritabanından siler",
+                usage: [
+                    {
+                        name: "veri",
+                        required: true,
+                        type: "string"
+                    }
+                ],
+                returns: "null"
+            },
+            "konsol_basılı_tuş": {
+                description: "Konsolda tuşun basılıp basılmadığını döner",
+                usage: [
+                    {
+                        name: "tuş",
+                        required: true,
+                        type: "string"
+                    }
+                ],
+                returns: "boolean"
+            },
+            "satır_oku": {
+                description: "Yazı ve enter tuşuna basılmasını bekler ve yazıyı döner",
+                usage: null,
+                returns: "string"
+            },
+            "harf_oku": {
+                description: "Bir tuşa basılmasını bekler ve tuşu döner",
+                usage: null,
+                returns: "string"
+            },
+            "canlı_oluştur": {
+                description: "Canlı oluşturur ve döner",
+                usage: [
+                    {
+                        name: "x",
+                        required: true,
+                        type: "number"
+                    },
+                    {
+                        name: "y",
+                        required: true,
+                        type: "number"
+                    }
+                ],
+                returns: "integer"
+            },
+            "resim_model_oluştur": {
+                description: "Resim modeli oluşturur ve döner",
+                usage: [
+                    {
+                        name: "canlı",
+                        required: true,
+                        type: "integer"
+                    },
+                    {
+                        name: "isim",
+                        required: true,
+                        type: "string"
+                    },
+                    {
+                        name: "url",
+                        required: true,
+                        type: "string"
+                    }
+                ],
+                returns: "integer"
+            },
+            "genişlik_ayarla": {
+                description: "Canlının genişliğini ayarlar",
+                usage: [
+                    {
+                        name: "canlı",
+                        required: true,
+                        type: "integer"
+                    },
+                    {
+                        name: "genişlik",
+                        required: true,
+                        type: "number"
+                    }
+                ],
+                returns: "null"
+            },
+            "yükseklik_ayarla": {
+                description: "Canlının yüksekliğini ayarlar",
+                usage: [
+                    {
+                        name: "canlı",
+                        required: true,
+                        type: "integer"
+                    },
+                    {
+                        name: "yükseklik",
+                        required: true,
+                        type: "number"
+                    }
+                ],
+                returns: "null"
+            },
+            "x_ayarla": {
+                description: "Canlının x pozisyonunu ayarlar",
+                usage: [
+                    {
+                        name: "canlı",
+                        required: true,
+                        type: "integer"
+                    },
+                    {
+                        name: "x",
+                        required: true,
+                        type: "number"
+                    }
+                ],
+                returns: "null"
+            },
+            "y_ayarla": {
+                description: "Canlının y pozisyonunu ayarlar",
+                usage: [
+                    {
+                        name: "canlı",
+                        required: true,
+                        type: "integer"
+                    },
+                    {
+                        name: "y",
+                        required: true,
+                        type: "number"
+                    }
+                ],
+                returns: "null"
+            },
+            "açı_ayarla": {
+                description: "Canlının açısını ayarlar",
+                usage: [
+                    {
+                        name: "canlı",
+                        required: true,
+                        type: "integer"
+                    },
+                    {
+                        name: "açı",
+                        required: true,
+                        type: "number"
+                    }
+                ],
+                returns: "null"
+            },
+            "genişlik": {
+                description: "Canlının genişliğini döner",
+                usage: [
+                    {
+                        name: "canlı",
+                        required: true,
+                        type: "integer"
+                    }
+                ],
+                returns: "null"
+            },
+            "yükseklik": {
+                description: "Canlının yüksekliğini döner",
+                usage: [
+                    {
+                        name: "canlı",
+                        required: true,
+                        type: "integer"
+                    }
+                ],
+                returns: "null"
+            },
+            "x": {
+                description: "Canlının x pozisyonunu döner",
+                usage: [
+                    {
+                        name: "canlı",
+                        required: true,
+                        type: "integer"
+                    }
+                ],
+                returns: "null"
+            },
+            "y": {
+                description: "Canlının y pozisyonunu döner",
+                usage: [
+                    {
+                        name: "canlı",
+                        required: true,
+                        type: "integer"
+                    }
+                ],
+                returns: "null"
+            },
+            "açı": {
+                description: "Canlının açısını döner",
+                usage: [
+                    {
+                        name: "canlı",
+                        required: true,
+                        type: "integer"
+                    }
+                ],
+                returns: "null"
+            },
+            "basılı_tuş": {
+                description: "Tuşun basılı olup olmadığını döner",
+                usage: [
+                    {
+                        name: "tuş",
+                        required: true,
+                        type: "string"
+                    }
+                ],
+                returns: "boolean"
+            }
+        }
+    };
+
+    const translation = {
+        "en_US": {
+            "projects": "View projects",
+            "math": "Math %0 function",
+            "usage": "Usage",
+            "string": "string",
+            "integer": "integer",
+            "float": "float",
+            "number": "number",
+            "boolean": "boolean",
+            "null": "null",
+            "any": "any",
+
+            "clear": "clear",
+            "random": "random",
+            "print": "print",
+            "printf": "printf",
+            "wait": "wait",
+            "wait_ms": "wait_ms",
+            "stop": "stop",
+            "eval": "eval",
+            "data_set": "data_set",
+            "data_get": "data_get",
+            "data_remove": "data_remove",
+            "console_key_down": "console_key_down",
+            "read_line": "read_line",
+            "read_key": "read_key",
+
+            "create_entity": "create_entity",
+            "create_image_model": "create_image_model",
+            "set_width": "set_width",
+            "set_height": "set_height",
+            "set_x": "set_x",
+            "set_y": "set_y",
+            "set_angle": "set_angle",
+
+            "get_width": "get_width",
+            "get_height": "get_height",
+            "get_x": "get_x",
+            "get_y": "get_y",
+            "get_angle": "get_angle",
+
+            "key_down": "key_down"
+        },
+        "tr_TR": {
+            "projects": "Projeleri görüntüle",
+            "math": "%0 matematik fonksiyonu",
+            "usage": "Kullanım",
+            "string": "yazı",
+            "integer": "tam sayı",
+            "float": "rasyonel sayı",
+            "number": "sayı",
+            "boolean": "mantık",
+            "null": "boş",
+            "any": "hepsi",
+
+            "clear": "temizle",
+            "random": "rastgele",
+            "print": "yazdır",
+            "printf": "yazdırf",
+            "wait": "bekle",
+            "wait_ms": "bekle_ms",
+            "stop": "durdur",
+            "eval": "eval",
+            "data_set": "veri_ayarla",
+            "data_get": "veri_al",
+            "data_remove": "veri_sil",
+            "console_key_down": "konsol_basılı_tuş",
+            "read_line": "satır_oku",
+            "read_key": "harf_oku",
+
+            "create_entity": "canlı_oluştur",
+            "create_image_model": "resim_model_oluştur",
+            "set_width": "genişlik_ayarla",
+            "set_height": "yükseklik_ayarla",
+            "get_width": "genişlik",
+            "get_height": "yükseklik",
+            "set_x": "x_ayarla",
+            "set_y": "y_ayarla",
+            "set_angle": "açı_ayarla",
+            "get_x": "x",
+            "get_y": "y",
+            "get_angle": "açı",
+            "key_down": "basılı_tuş"
         }
     };
     let NAME = "";
     window.load_start = () => {
-        document.getElementById("infos").innerHTML = translation[lang].infos.map((i, a) => `<div class="info">
-                    <div class="title">${i.title}</div>
-                    <div class="description" onmouseover="open_text(${a})" onmouseout="close_text(${a})">
+        [
+            "cos", "exp", "acos", "acosh", "asin", "asinh", "log", "atan", "atan2", "atanh", "cbrt",
+            "ceil", "max", "min", "cosh", "clz32", "expm1", "fround", "hypot", "imul", "log2", "log1p",
+            "log10", "round", "sign", "sin", "sinh", "tan", "tanh", "trunc", "csc", "sec", "cot"
+        ].forEach(i => Object.keys(infos).forEach(a=> infos[a][i] = {
+            description: translation[lang].math.replace("%0", ({hypot: "hypotenuse"}[i] || i)),
+            usage: [
+                {
+                    name: "value",
+                    required: true,
+                    type: "number"
+                }
+            ],
+            returns: "float"
+        }));
+        document.getElementById("infos").innerHTML = Object.keys(infos[lang]).map((key, index) => {
+            const {description, usage, returns} = infos[lang][key];
+            return `<div class="info">
+                    <div class="title">${key}</div>
+                    <div class="description" onmouseover="open_text(${index})" onmouseout="close_text(${index})">
                     </div>
-                    <div class="text" id="text${a}" hidden>
-                        ${i.description}
+                    <div class="text" id="text${index}" hidden>
+                        ${description}<br>${translation[lang].usage}: ${key}(${usage ? usage.map(us => `<i>${us.name}</i>: <b>${translation[lang][us.type]}${us.required ? "" : "?"}</b>`).join(", ") : ""})<br>Returns <b>${translation[lang][returns]}</b>
                     </div>
-                </div>`)
+                </div>`;
+        }).join("");
         document.getElementById("NAME").innerHTML = NAME;
         document.getElementById("LNG-projects").innerHTML = translation[lang]["projects"];
         document.getElementById("LNG-projects").title = translation[lang]["projects"];
@@ -222,18 +910,21 @@
     }
 
     .description {
+        position: absolute;
         cursor: help;
         margin-top: -30px;
         padding-top: 30px;
-        padding-bottom: 15px;
+        padding-bottom: 60px;
+        width: 80%;
     }
 
     .text {
         margin-left: 10px;
-        margin-top: -5px;
         font-family: Calibri, serif;
-        transition-timing-function: ease;
-        transition: transform 1.5s;
+    }
+
+    .title {
+        padding-left: 10px;
     }
 
     * {
