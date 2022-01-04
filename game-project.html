@@ -63,6 +63,7 @@
 </body>
 </html>
 <script src="scripts/project-api.js"></script>
+<script src="scripts/console.js"></script>
 <script src="scripts/compiler.js"></script>
 <script src="scripts/entity-api.js"></script>
 <script>
@@ -98,11 +99,11 @@
         gamey.kill_all();
         log_console(gamey.langs[lang]["stopped"], "rgb(255, 0, 0)");
     }
-    const log_console = (msg, color) => {
-        console_text_text.innerHTML = console_text_text.innerHTML + "<span style='color: " + (color || "#ffffff") + "'>" + msg.toString().replaceAll("<", "&zwnj;<").replaceAll("<", "<&zwnj;") + "</span><br>";
-        console_text_text.scrollTop = console_text_text.scrollHeight;
-    }
-    const clear_console = () => console_text_text.innerHTML = "";
+    const Console = new document.Console(document.getElementById("toolbar-console-text"));
+    const log_console = (...a) => Console.log(...a);
+    const logf_console = (...a) => Console.logf(...a);
+    const clear_console = () => Console.clear();
+    const backspace_console = () => Console.backspace();
     const start_compile = () => {
         if (gamey.any_alive_process()) return;
         entities = [];
@@ -111,6 +112,8 @@
         const compiler = new gamey.Compiler(code_area.value.split("\n"));
         open_game_area();
         compiler.on("on_print", text => gamey.any_alive_process() ? log_console(text) : null);
+        compiler.on("on_printf", text => gamey.any_alive_process() ? logf_console(text) : null);
+        compiler.on("on_backspace", () => document._gamey.any_alive_process() ? backspace_console() : null);
         compiler.on("on_stop", () => log_console(gamey.langs[lang]["stopped"], "rgb(255, 0, 0)"));
         compiler.on("on_end", () => log_console(gamey.langs[lang]["ended"], "rgb(255, 255, 0)"));
         compiler.on("on_error", err => log_console(translation[lang]["error"] + ": " + err, "rgb(255, 0, 0)"));

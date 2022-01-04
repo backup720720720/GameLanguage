@@ -1,48 +1,52 @@
 <!--suppress JSFileReferences -->
 <html lang="en">
+
 <head>
     <title id="ttl"></title>
 </head>
+
 <body style="background: #2b2b2b">
-<div class="container">
-    <h1 id="NAME"></h1>
-    <div class="buttons">
-        <button class="btn" id="exit" onclick="window.location.href = './projects.html'"></button>
-        <button class="btn" id="stop_all" onclick="stop_all()"></button>
-        <button class="btn" id="start_compile" onclick="start_compile()"></button>
-    </div>
-    <textarea spellcheck="false" style="resize: none;outline: none" id="code_area" class="code"></textarea>
-    <div class="terminal" id="terminal">
-        <div id="terminal-toggle" onclick="toggle_terminal()">
-            <span style="font-family: Consolas, serif" id="LNG-console"></span>
-            <svg width="20" height="20" style="position: absolute" id="open_terminal">
-                <path d="M5 13 L10 7 Z" stroke="white"></path>
-                <path d="M10 7 L15 13 Z" stroke="white"></path>
-            </svg>
-            <svg width="20" height="20" class="hidden" style="position: absolute" id="close_terminal">
-                <path d="M5 7 L10 13 Z" stroke="white"></path>
-                <path d="M10 13 L15 7 Z" stroke="white"></path>
-            </svg>
+    <div class="container">
+        <h1 id="NAME"></h1>
+        <div class="buttons">
+            <button class="btn" id="exit" onclick="window.location.href = './projects.html'"></button>
+            <button class="btn" id="stop_all" onclick="stop_all()"></button>
+            <button class="btn" id="start_compile" onclick="start_compile()"></button>
         </div>
-        <img class="clear" onclick="clear_console()" src="assets/clear.png">
-        <div id="toolbar-console-text" class="terminal-list" style="font-family: Consolas, serif" hidden></div>
-    </div>
-</div>
-<div class="popup-container" id="popup" hidden>
-    <div class="popup">
-        <div class="popup-contents">
-            <div id="popup-content"></div>
-            <svg onclick="close_popup()" width="50" height="35" class="popup-close">
-                <path d="M20 12 L30 22 Z" stroke="white"></path>
-                <path d="M30 12 L20 22 Z" stroke="white"></path>
-            </svg>
+        <textarea spellcheck="false" style="resize: none;outline: none" id="code_area" class="code"></textarea>
+        <div class="terminal" id="terminal">
+            <div id="terminal-toggle" onclick="toggle_terminal()">
+                <span style="font-family: Consolas, serif" id="LNG-console"></span>
+                <svg width="20" height="20" style="position: absolute" id="open_terminal">
+                    <path d="M5 13 L10 7 Z" stroke="white"></path>
+                    <path d="M10 7 L15 13 Z" stroke="white"></path>
+                </svg>
+                <svg width="20" height="20" class="hidden" style="position: absolute" id="close_terminal">
+                    <path d="M5 7 L10 13 Z" stroke="white"></path>
+                    <path d="M10 13 L15 7 Z" stroke="white"></path>
+                </svg>
+            </div>
+            <img class="clear" onclick="clear_console()" src="assets/clear.png">
+            <div id="toolbar-console-text" class="terminal-list" style="font-family: Consolas, serif" hidden></div>
         </div>
     </div>
-</div>
-<div style="position: absolute;left:0;top:0;width:100%;height:100%;background:#232323" id="start"></div>
+    <div class="popup-container" id="popup" hidden>
+        <div class="popup">
+            <div class="popup-contents">
+                <div id="popup-content"></div>
+                <svg onclick="close_popup()" width="50" height="35" class="popup-close">
+                    <path d="M20 12 L30 22 Z" stroke="white"></path>
+                    <path d="M30 12 L20 22 Z" stroke="white"></path>
+                </svg>
+            </div>
+        </div>
+    </div>
+    <div style="position: absolute;left:0;top:0;width:100%;height:100%;background:#232323" id="start"></div>
 </body>
+
 </html>
 <script src="scripts/project-api.js"></script>
+<script src="scripts/console.js"></script>
 <script src="scripts/compiler.js"></script>
 <script>
     const PROJECT_NAME = window.location.href.split("?name=").slice(1).join("");
@@ -54,18 +58,19 @@
         document._gamey.kill_all();
         log_console(document._gamey.langs[lang]["stopped"], "rgb(255, 0, 0)");
     }
-    const log_console = (msg, color) => {
-        const list = document.getElementById("toolbar-console-text");
-        list.innerHTML = list.innerHTML + "<span style='color: " + (color || "#ffffff") + "'>" + msg.toString().replaceAll("<", "&zwnj;<").replaceAll("<", "<&zwnj;") + "</span><br>";
-        list.scrollTop = list.scrollHeight;
-    }
-    const clear_console = () => document.getElementById("toolbar-console-text").innerHTML = "";
+    const Console = new document.Console(document.getElementById("toolbar-console-text"));
+    const log_console = (...a) => Console.log(...a);
+    const logf_console = (...a) => Console.logf(...a);
+    const clear_console = () => Console.clear();
+    const backspace_console = () => Console.backspace();
     const start_compile = () => {
         if (document._gamey.any_alive_process()) return;
         document._gamey.kill_all();
         const compiler = new document._gamey.Compiler(code_area.value.split("\n"));
         open_terminal();
         compiler.on("on_print", text => document._gamey.any_alive_process() ? log_console(text) : null);
+        compiler.on("on_printf", text => document._gamey.any_alive_process() ? logf_console(text) : null);
+        compiler.on("on_backspace", () => document._gamey.any_alive_process() ? backspace_console() : null);
         compiler.on("on_stop", () => log_console(document._gamey.langs[lang]["stopped"], "rgb(255, 0, 0)"));
         compiler.on("on_end", () => log_console(document._gamey.langs[lang]["ended"], "rgb(255, 255, 0)"));
         compiler.on("on_error", err => log_console(translation[lang]["error"] + ": " + err, "rgb(255, 0, 0)"));

@@ -9,6 +9,7 @@
         <h1 id="LNG-console" class="btn" onclick="open_console_project_popup()"></h1>
         <h1 id="LNG-game" class="btn" onclick="open_game_project_popup()"></h1>
         <h1 id="LNG-archived" class="btn" onclick="window.location.href = './archived.html'"></h1>
+        <h1 id="LNG-docs" class="btn" onclick="window.location.href = './docs.html'"></h1>
     </div>
     <h2 class="back-pad" id="LNG-last-projects"></h2>
     <div class="extra-pad projects scroll">
@@ -31,7 +32,6 @@
 </body>
 </html>
 <script src="scripts/project-api.js"></script>
-<script src="scripts/compiler.js"></script>
 <script>
     const translation = {
         en_US: {
@@ -55,7 +55,8 @@
             "game-type": "Game",
             "archive-title": "Archive Project",
             "are-you-sure-archive": "Are you sure to archive this project?",
-            "archive-project-button": "Archive project"
+            "archive-project-button": "Archive project",
+            "docs": "Documentation"
         },
         tr_TR: {
             "last-projects": "Projelerin",
@@ -78,7 +79,8 @@
             "game-type": "Oyun",
             "archive-title": "Projeyi Arşivle",
             "are-you-sure-archive": "Bu projeyi arşivlemek istediğinden emin misin?",
-            "archive-project-button": "Projeyi arşivle"
+            "archive-project-button": "Projeyi arşivle",
+            "docs": "Dokümentasyon"
         }
     };
     const create_popup = content => {
@@ -191,9 +193,11 @@
         document.getElementById("LNG-console").innerHTML = translation[lang]["console"];
         document.getElementById("LNG-game").innerHTML = translation[lang]["game"];
         document.getElementById("LNG-archived").innerHTML = translation[lang]["archived-page"];
+        document.getElementById("LNG-docs").innerHTML = translation[lang]["docs"];
         document.getElementById("LNG-console").title = translation[lang]["console"];
         document.getElementById("LNG-game").title = translation[lang]["game"];
         document.getElementById("LNG-archived").title = translation[lang]["archived-page"];
+        document.getElementById("LNG-docs").title = translation[lang]["docs"];
         document.getElementById("NAME").innerHTML = NAME;
         refresh_project_div();
         document.getElementById("start").hidden = true;
@@ -244,7 +248,7 @@
     }
 
     .scroll {
-        overflow-y: scroll;
+        overflow-y: auto;
         width: 57%;
         height: 70%;
     }

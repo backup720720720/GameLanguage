@@ -1,0 +1,245 @@
+<html lang="en">
+
+<head>
+    <title>Gamey</title>
+</head>
+
+<body style="background: #2b2b2b">
+    <div class="container">
+        <h1 id="NAME"></h1>
+        <div class="create">
+            <h1 id="LNG-projects" class="btn" onclick="window.location.href = './projects.html'"></h1>
+        </div>
+        <div class="extra-pad infos scroll">
+            <div id="infos">
+            </div>
+        </div>
+    </div>
+    <div class="popup-container" id="popup" hidden>
+        <div class="popup">
+            <div class="popup-contents">
+                <div id="popup-content"></div>
+                <svg onclick="close_popup()" width="50" height="35" class="popup-close">
+                    <path d="M20 12 L30 22 Z" stroke="white"></path>
+                    <path d="M30 12 L20 22 Z" stroke="white"></path>
+                </svg>
+            </div>
+        </div>
+    </div>
+    <div style="position: absolute;left:0;top:0;width:100%;height:100%;background:#232323" id="start"></div>
+</body>
+
+</html>
+<script>
+    function open_text(i) {
+        const t = document.getElementById("text" + i);
+        t.hidden = undefined;
+    }
+    function close_text(i) {
+        const t = document.getElementById("text" + i);
+        t.hidden = true;
+    }
+    const translation = {
+        "en_US": {
+            "projects": "View projects",
+            "infos": {
+                "clear": {
+                    description: "Clears console",
+                    usage: null,
+                    returns: "null"
+                },
+                "random": {
+                    description: "Generates a random number between input numbers",
+                    usage: [
+                        {
+                            name: "minimumValue",
+                            required: true,
+                            type: "int"
+                        },
+                        {
+                            name: "maximumValue",
+                            required: true,
+                            type: "int"
+                        }
+                    ],
+                    returns: "int"
+                },
+                "csc": {
+                    description: "Returns hypotenuse over opposite side",
+                    usage: [
+                        {
+                            name: "value",
+                            required: true,
+                            type: "number"
+                        }
+                    ],
+                    returns: "int"
+                },
+                "csc": {
+                    description: "Returns hypotenuse over opposite side",
+                    usage: [
+                        {
+                            name: "value",
+                            required: true,
+                            type: "number"
+                        }
+                    ],
+                    returns: "int"
+                },
+            }
+        },
+        "tr_TR": {
+            "projects": "Projeleri görüntüle"
+        }
+    };
+    let NAME = "";
+    window.load_start = () => {
+        document.getElementById("infos").innerHTML = translation[lang].infos.map((i, a) => `<div class="info">
+                    <div class="title">${i.title}</div>
+                    <div class="description" onmouseover="open_text(${a})" onmouseout="close_text(${a})">
+                    </div>
+                    <div class="text" id="text${a}" hidden>
+                        ${i.description}
+                    </div>
+                </div>`)
+        document.getElementById("NAME").innerHTML = NAME;
+        document.getElementById("LNG-projects").innerHTML = translation[lang]["projects"];
+        document.getElementById("LNG-projects").title = translation[lang]["projects"];
+        document.getElementById("start").hidden = true;
+    }
+</script>
+<style>
+    @font-face {
+        font-family: ProximaNova;
+        src: url("Proxima Nova Font.otf") format("opentype");
+    }
+
+    .extra-pad {
+        padding-left: 40px
+    }
+
+    .infos {
+        position: absolute;
+        width: 60%;
+        padding-left: 20px;
+        color: #dae5d8;
+    }
+
+    .create {
+        position: absolute;
+        top: 150px;
+        right: 90px;
+    }
+
+    .container {
+        padding-top: 20px;
+        padding-left: 30px;
+    }
+
+    .btn {
+        font-weight: normal;
+        font-size: 25px;
+        padding: 10px;
+        border: 1px solid white;
+        border-radius: 3px;
+        box-shadow: 2px 2px;
+        cursor: pointer;
+    }
+
+    .btn:hover {
+        background: #232323;
+    }
+
+    ::-webkit-scrollbar {
+        width: 10px;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: #f1f1f1;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: #888;
+        cursor: pointer;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        background: #555;
+    }
+
+    .popup {
+        position: absolute;
+        width: 60%;
+        height: 60%;
+        background: #232323;
+        border-radius: 8px;
+        left: 20%;
+        opacity: 97%;
+    }
+
+    .popup-contents {
+        padding: 30px;
+    }
+
+    .popup-close {
+        position: absolute;
+        right: 0;
+        top: 0;
+        background: #e81123;
+        cursor: pointer;
+    }
+
+    .popup-close:hover {
+        background: #b00b1a;
+    }
+
+    .popup-container {
+        position: absolute;
+        width: 98%;
+        height: 74%;
+    }
+
+    .popup-input {
+        background: #232323;
+        color: white;
+        border-radius: 2px;
+        border: 1px solid white;
+        padding: 10px;
+        margin-top: 20px;
+    }
+
+    .scroll {
+        overflow-y: auto;
+        width: 57%;
+        height: 70%;
+    }
+
+    .info {
+        background: none;
+        padding: 20px 20px 40px;
+        cursor: default;
+        margin-bottom: 10px;
+    }
+
+    .description {
+        cursor: help;
+        margin-top: -30px;
+        padding-top: 30px;
+        padding-bottom: 15px;
+    }
+
+    .text {
+        margin-left: 10px;
+        margin-top: -5px;
+        font-family: Calibri, serif;
+        transition-timing-function: ease;
+        transition: transform 1.5s;
+    }
+
+    * {
+        user-select: none;
+        color: white;
+        font-weight: bolder;
+        font-family: ProximaNova, serif;
+    }
+</style>

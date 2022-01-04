@@ -1,5 +1,5 @@
 const electron = require("electron");
-const {app, BrowserWindow, globalShortcut, ipcRenderer} = electron;
+const {app, BrowserWindow, globalShortcut} = electron;
 /*** @type {{language: string, file: string, console: boolean, refresh: boolean}} */
 const conf = require("./conf.json");
 const NAME = "Gamey";

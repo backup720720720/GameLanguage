@@ -21,6 +21,7 @@ let NAME = "";
             "invalid-type": "Invalid type",
             "not-defined-variable": "Variable '%0' haven't defined",
             "print": "print",
+            "printf": "printf",
             "wait": "wait",
             "wait-number": "Wait function should include number argument",
             "wait-ms": "wait_ms",
@@ -51,7 +52,6 @@ let NAME = "";
             "repeat_always": "repeat_always",
             "repeat_times": "repeat_times",
             "repeat_times_wait": "repeat_times_wait",
-            "cannot-wait-func": "Cannot use wait functions in functions",
             "clear": "clear",
             "arguments-number": "Arguments should be number",
             "true": "true",
@@ -66,7 +66,8 @@ let NAME = "";
             "data-remove-error": "First argument of data_remove should be type of string",
             "console-key-down": "console_key_down",
             "console-key-down-error": "First argument of console_key_down should be type of string",
-            "console-readline": "read_line"
+            "console-readline": "read_line",
+            "console-readkey": "read_key"
         },
         tr_TR: {
             "Line": "Sat\u0131r",
@@ -75,6 +76,7 @@ let NAME = "";
             "invalid-type": "Ge\u00e7ersiz t\u00fcr",
             "not-defined-variable": "'%0' de\u011fi\u015fkeni tan\u0131mlanmad\u0131",
             "print": "yazd\u0131r",
+            "printf": "yazd\u0131rf",
             "wait": "bekle",
             "wait-number": "Bekle fonksiyonu say\u0131 arg\u00fcman\u0131 i\u00e7ermeli",
             "wait-ms": "bekle_ms",
@@ -105,7 +107,6 @@ let NAME = "";
             "repeat_always": "s\u00fcrekli_tekrarla",
             "repeat_times": "kere_tekrarla",
             "repeat_times_wait": "kere_tekrarla_bekle",
-            "cannot-wait-func": "Bekle fonksiyonlar\u0131 fonksiyonlar\u0131n\u0131n i\u00e7inde kullan\u0131lamaz",
             "clear": "temizle",
             "arguments-number": "Arg\u00fcmanlar say\u0131 olmal\u0131",
             "true": "do\u011fru",
@@ -120,7 +121,8 @@ let NAME = "";
             "data-remove-error": "Veri_sil fonksiyonunun ilk arg\u00fcman\u0131 yaz\u0131 tipinde olmal\u0131",
             "console-key-down": "konsol_basılı_tuş",
             "console-key-down-error": "Konsol_basılı_tuş fonksiyonunun ilk arg\u00fcman\u0131 yaz\u0131 tipinde olmal\u0131",
-            "console-readline": "satır_oku"
+            "console-readline": "satır_oku",
+            "console-readkey": "harf_oku"
         }
     };
 
@@ -236,10 +238,10 @@ let NAME = "";
             this.run = () => compiler.compile_alg(alg, compiler);
         }
 
-        string(args, compiler) {
+        async string(args, compiler) {
             const result = this.run(args || this.args, compiler);
-            if (result instanceof Promise) return result;
-            return result.string(null, compiler);
+            if (result instanceof Promise) return (await result);
+            return (await result.string(null, compiler));
         }
 
         /**
@@ -275,6 +277,20 @@ let NAME = "";
         }
     }
 
+    class _Promise extends Type {
+        constructor(promise) {
+            super(promise);
+        }
+
+        async string() {
+            return (await this.a).string();
+        }
+
+        clone() {
+            return new _Promise(this.a);
+        }
+    }
+
     const _err = (err, compiler) => {
         compiler.emit("on_error", err);
         compiler.emit("on_end");
@@ -288,11 +304,11 @@ let NAME = "";
             this.args = b;
         }
 
-        string(args, compiler) {
+        async string(args, compiler) {
             const c = DEFAULT_FUNCTIONS.find(i => i.prototype.getName() === this.a);
-            let a = compiler.get_variable(this.a) || c.string(c.args, compiler);
+            let a = await compiler.get_variable(this.a) || (c ? await c.string(c.args, compiler) : null);
             if (!a) return _err(langs[lang]["not-defined-variable"].replace("%0", this.a), compiler);
-            if (a instanceof _Callable || a.prototype instanceof _Callable) a = a.string(args, compiler);
+            if (a instanceof _Callable || a.prototype instanceof _Callable) a = await a.string(args, compiler);
             return a;
         }
 
@@ -353,7 +369,7 @@ let NAME = "";
                 return name();
             }
 
-            run(args, compiler) {
+            async run(args, compiler) {
                 return run(args, compiler);
             }
         }
@@ -367,12 +383,12 @@ let NAME = "";
         return new _Number(res);
     });
 
-    const __set__ = generate_function(() => "__set__", (args, compiler) => {
+    const __set__ = generate_function(() => "__set__", async (args, compiler) => {
         args = compiler.sets[args[0] * 1];
         if (!args) return _err(langs[lang]["no-set"], compiler);
         const name = args[0];
         let setting = args[1];
-        const old_var = compiler.get_variable(name);
+        const old_var = await compiler.get_variable(name);
         if ((compiler.variables[name] && compiler.variables[name].constant) || DEFAULT_FUNCTIONS.find(i => i.prototype.getName() === name)) return _err(langs[lang]["const-var"], compiler);
         const _c = () => {
             return _err(langs[lang]["not-defined-variable"].replace("%0", name), compiler);
@@ -382,8 +398,13 @@ let NAME = "";
             if (!old_var) _c();
             setting = "(" + old_var + ")" + args[3] + "(" + setting + ")";
         }
-        setting = compile_auto(setting, compiler);
-        compiler.set_variable(name, setting.map(i => i instanceof _Callable ? i.run(i.args, compiler) : i).map(i => i.string(i.args, compiler)).join(""), is_constant);
+        setting = await compile_auto(setting, compiler);
+        let vr = "";
+        for (let v = 0; v < setting.length; v++) {
+            const x = setting[v];
+            vr += await (x instanceof _Callable ? await x.run(x.args, compiler) : x).string(x.args, compiler);
+        }
+        compiler.set_variable(name, vr, is_constant);
         return new _Null();
     });
     setTimeout(() => {
@@ -407,6 +428,7 @@ let NAME = "";
     }, 150);
 
     let console_read_line = null;
+    let console_read_key = null;
 
     const DEFAULT_FUNCTIONS = [
         __set__,
@@ -441,13 +463,17 @@ let NAME = "";
             args.forEach(i => compiler.emit("on_print", _eval(i)));
             return new _Null();
         }),
+        generate_function(() => langs[lang]["printf"], (args, compiler) => {
+            args.forEach(i => compiler.emit("on_printf", _eval(i)));
+            return new _Null();
+        }),
         generate_function(() => langs[lang]["wait"], (args) => {
             if (!args[0] * 1) return _err(langs[lang]["wait-number"], compiler);
-            return new Promise((a) => setTimeout(() => a(new _Null()), args[0] * 1 * 1000));
+            return new _Promise(new Promise((a) => setTimeout(() => a(new _Null()), args[0] * 1 * 1000)));
         }),
         generate_function(() => langs[lang]["wait-ms"], (args) => {
             if (!args[0] * 1) return _err(langs[lang]["wait-number"], compiler);
-            return new Promise((a) => setTimeout(() => a(new _Null()), args[0] * 1));
+            return new _Promise(new Promise((a) => setTimeout(() => a(new _Null()), args[0] * 1)));
         }),
         generate_function(() => langs[lang]["stop"], (args, compiler) => {
             compiler.working = false;
@@ -493,10 +519,15 @@ let NAME = "";
             return new _Number(console_held_keys[args[0]] ? 1 : 0);
         }),
         generate_function(() => langs[lang]["console-readline"], (args, compiler) => {
-            return new Promise(r => {
-                console.console_read_line = { compiler, r };
-                compiler.emit("on_printf", ev.key);
-            });
+            compiler.emit("on_print", "");
+            return new _Promise(new Promise(r => {
+                console_read_line = { compiler, r, complete: "" };
+            }));
+        }),
+        generate_function(() => langs[lang]["console-readkey"], (args, compiler) => {
+            return new _Promise(new Promise(r => {
+                console_read_key = { compiler, r };
+            }));
         })
     ];
 
@@ -508,30 +539,57 @@ let NAME = "";
         addEventListener("keydown", ev => {
             if (!toggled_console) return;
             console_held_keys[ev.key] = true;
-            if (ev.key.length === 1) {
-                if (console_read_line) {
-                    compiler.emit("on_print", ev.key);
+            if (console_read_line) {
+                const { compiler } = console_read_line;
+                if (ev.key.length === 1) {
+                    compiler.emit("on_printf", ev.key);
+                    console_read_line.complete += ev.key;
+                } else switch (ev.key) {
+                    case "Enter":
+                        console_read_line.r(new _String(console_read_line.complete));
+                        console_read_line = null;
+                        break;
+                    case "Backspace":
+                        compiler.emit("on_backspace");
+                        console_read_line.complete = console_read_line.complete.split("").slice(0, console_read_line.complete.length - 1).join("");
+                        break;
+                }
+            }
+            if (console_read_key) {
+                const { compiler } = console_read_key;
+                if (ev.key.length === 1) {
+                    compiler.emit("on_printf", ev.key);
+                    console_read_key.r(new _String(ev.key));
+                    console_read_key = null;
                 }
             }
         });
         addEventListener("keyup", ev => {
             if (!toggled_console) return;
-            delete console_held_keys[ev.key]
+            delete console_held_keys[ev.key];
         });
         addEventListener("blur", () => console_held_keys = {});
     }
 
     const additions = ["pow", "floor", "sqrt", "abs"];
     /*** @type {{name: string, value: string}[]} */
-    const initial_variables = [
-        { name: langs[lang]["true"], value: "1" },
-        { name: langs[lang]["false"], value: "0" },
-        { name: "null", value: "0" }
-    ];
-    ["E", "LN10", "LN2", "LOG10E", "LOG2E", "PI", "SQRT1_2", "SQRT2"].forEach(i => initial_variables.push({
-        name: i,
-        value: Math[i].toString()
-    }))
+    let initial_variables = [];
+    let load = setTimeout(() => {
+        initial_variables = [
+            { name: langs[lang]["true"], value: "1" },
+            { name: langs[lang]["false"], value: "0" },
+            { name: "null", value: "0" }
+        ];
+        ["E", "LN10", "LN2", "LOG10E", "LOG2E", "PI", "SQRT1_2", "SQRT2"].forEach(i => initial_variables.push({
+            name: i,
+            value: Math[i].toString()
+        }))
+        document.defaults = {
+            functions: DEFAULT_FUNCTIONS.map(i => {
+                return { name: i.prototype.getName() };
+            }), variables: initial_variables, statements: ["if", "else", "repeat", "repeat_wait", "repeat_times", "repeat_times_wait", "repeat_always"].map(i => { return { name: langs[lang][i] } })
+        };
+    }, 500);
 
     const other_math = [
         "cos", "exp", "acos", "acosh", "asin", "asinh", "log", "atan", "atan2", "atanh", "cbrt",
@@ -541,18 +599,13 @@ let NAME = "";
 
     additions.forEach(i => DEFAULT_FUNCTIONS.push(generate_math_function(i, () => langs[lang][i])));
     other_math.forEach(i => DEFAULT_FUNCTIONS.push(generate_math_function(i)));
-    document.defaults = {
-        functions: DEFAULT_FUNCTIONS.map(i => {
-            return { name: i.prototype.getName() };
-        }), variables: initial_variables, statements: ["if", "else", "repeat", "repeat_wait", "repeat_times", "repeat_times_wait", "repeat_always"].map(i => { return { name: langs[lang][i] } })
-    };
 
-    /**
+    /**.
      * @param {string} str
      * @param {Compiler} compiler
      * @returns {_Callable}
      */
-    function compile_function_type(str, compiler) {
+    async function compile_function_type(str, compiler) {
         str = clear_spaces(str);
         let name = "";
         let a = false;
@@ -568,13 +621,18 @@ let NAME = "";
         let d = b.split("").slice(0, b.length).join("");
         let e = split_function_parameters(d).map(i => clear_spaces(i));
         const f = DEFAULT_FUNCTIONS.find(i => i.prototype.getName() === name);
-        let g = compiler.get_variable(name) || f;
+        let g = await compiler.get_variable(name) || f;
         if (!g || (!(g instanceof _Callable) && !(g.prototype instanceof _Callable))) return _err(langs[lang]["not-defined-variable"].replace("%0", name), compiler);
-        const func_args = e.map(j => compile_auto(j, compiler).map(i => {
-            const st = i.string(i.args, compiler);
-            if (st instanceof Promise) return _err(langs[lang]["cannot-wait-func"], compiler);
-            return st;
-        }).join(""));
+        const func_args = [];
+        for (let n = 0; n < e.length; n++) {
+            const m = e[n];
+            const cmp = await compile_auto(m, compiler);
+            func_args[n] = "";
+            for (b = 0; b < cmp.length; b++) {
+                const c = cmp[b];
+                func_args[n] += await c.string(c.args, compiler);
+            }
+        }
         if (g.prototype instanceof _Callable) g = new g(name, func_args);
         g.args = func_args;
         return g;
@@ -610,7 +668,7 @@ let NAME = "";
      * @param {Compiler} compiler
      * @returns {Type[]}
      */
-    function compile_auto(string, compiler) {
+    async function compile_auto(string, compiler) {
         let str_stat = null;
         let obj_stat = {
             "(": 0,
@@ -657,7 +715,7 @@ let NAME = "";
             }
             if (in_func) {
                 if (func_end > index) continue;
-                res.push(compile_function_type(clean, compiler));
+                res.push(await compile_function_type(clean, compiler));
                 in_func = false;
                 add = "";
                 continue;
@@ -763,7 +821,7 @@ let NAME = "";
     }
 
     const compile_line = async (line, next, compiler) => {
-        if (line instanceof Line) return line.run(next, compiler);
+        if (line instanceof Line) return await line.run(next, compiler);
         let str_stat = null;
         for (let i = 0; i < line.length; i++) {
             let m = line[i];
@@ -774,9 +832,9 @@ let NAME = "";
             }
         }
         if (str_stat) return _err(langs[lang]["close-string"], compiler);
-        const actions = compile_auto(line, compiler);
+        const actions = await compile_auto(line, compiler);
         for (let i = 0; i < actions.length; i++) {
-            const res = actions[i].string(null, compiler);
+            const res = await actions[i].string(null, compiler);
             if (res instanceof Promise) await res;
         }
         if (!compiler.working && !val) return;
@@ -861,9 +919,9 @@ let NAME = "";
             return list;
         }
 
-        run(next, compiler, val) {
-            let statement = compile_auto(this.statement, compiler).map(i => i.string(null, compiler)).join("");
-            if (_eval(statement)) super.run(next, compiler, val);
+        async run(next, compiler, val) {
+            let statement = await compile_auto(this.statement, compiler).map(async i => await i.string(null, compiler)).join("");
+            if (_eval(statement)) await super.run(next, compiler, val);
             else next();
         }
     }
@@ -885,10 +943,10 @@ let NAME = "";
         run(next, compiler) {
             const runtime_id = _loop_runtime_id++;
             compiler.add_loop(this, runtime_id);
-            const statement = () => compile_auto(this.statement, compiler).map(i => i.string(null, compiler)).join("");
-            const run = () => {
-                if (_eval(statement())) {
-                    super.run(() => setTimeout(() => run(), 1), compiler);
+            const statement = async () => await compile_auto(this.statement, compiler).map(async i => await i.string(null, compiler)).join("");
+            const run = async () => {
+                if (_eval(await statement())) {
+                    await super.run(() => setTimeout(() => run(), 1), compiler);
                 } else {
                     compiler.delete_loop(this, runtime_id);
                 }
@@ -904,13 +962,13 @@ let NAME = "";
             this.statement = statement;
         }
 
-        run(next, compiler) {
+        async run(next, compiler) {
             const runtime_id = _loop_runtime_id++;
             compiler.add_loop(this, runtime_id);
-            const statement = () => compile_auto(this.statement, compiler).map(i => i.string(null, compiler)).join("");
-            const run = () => {
+            const statement = async () => await compile_auto(this.statement, compiler).map(async i => await i.string(null, compiler)).join("");
+            const run = async () => {
                 if (_eval(statement())) {
-                    super.run(() => setTimeout(() => run(), 1), compiler);
+                    await super.run(() => setTimeout(() => run(), 1), compiler);
                 } else {
                     compiler.delete_loop(this, runtime_id, true);
                     next(true);
@@ -993,6 +1051,8 @@ let NAME = "";
             this.events = {
                 "on": {
                     "on_print": [],
+                    "on_printf": [],
+                    "on_backspace": [],
                     "on_stop": [],
                     "on_end": [],
                     "on_error": [],
@@ -1000,6 +1060,8 @@ let NAME = "";
                 },
                 "once": {
                     "on_print": [],
+                    "on_printf": [],
+                    "on_backspace": [],
                     "on_stop": [],
                     "on_end": [],
                     "on_error": [],
@@ -1024,8 +1086,8 @@ let NAME = "";
          * @param v
          * @return {string|_Callable|null}
          */
-        get_variable(v) {
-            return this.variables[v] ? (this.variables[v].value instanceof Type ? this.variables[v].value.string(this.variables[v].value.args, this) : this.variables[v].value) : null;
+        async get_variable(v) {
+            return this.variables[v] ? (this.variables[v].value instanceof Type ? (await this.variables[v].value.string(this.variables[v].value.args, this)) : this.variables[v].value) : null;
         }
 
         /**
@@ -1215,6 +1277,7 @@ let NAME = "";
         }
 
         compile(next) {
+            this.emit("on_print", "");
             this.end_func = next || (() => {
                 if (Object.keys(this.loops).length === 0) this.emit("on_end");
             });
@@ -1227,7 +1290,7 @@ let NAME = "";
         }
 
         /**
-         * @param {"on_print", "on_stop", "on_end", "on_error", "on_clear"} event
+         * @param {"on_print", "on_printf", "on_stop", "on_end", "on_error", "on_clear", "on_backspace"} event
          * @param {function} callback
          */
         on(event, callback) {
@@ -1236,7 +1299,7 @@ let NAME = "";
         }
 
         /**
-         * @param {"on_print", "on_stop", "on_end", "on_error", "on_clear"} event
+         * @param {"on_print", "on_printf", "on_stop", "on_end", "on_error", "on_clear", "on_backspace"} event
          * @param {function} callback
          */
         once(event, callback) {
@@ -1245,7 +1308,7 @@ let NAME = "";
         }
 
         /**
-         * @param {"on_print", "on_stop", "on_end", "on_error", "on_clear"} event
+         * @param {"on_print", "on_printf", "on_stop", "on_end", "on_error", "on_clear", "on_backspace"} event
          * @param {function} callback
          */
         remove_on(event, callback) {
@@ -1254,7 +1317,7 @@ let NAME = "";
         }
 
         /**
-         * @param {"on_print", "on_stop", "on_end", "on_error", "on_clear"} event
+         * @param {"on_print", "on_printf", "on_stop", "on_end", "on_error", "on_clear", "on_backspace"} event
          * @param {function} callback
          */
         remove_once(event, callback) {
@@ -1263,7 +1326,7 @@ let NAME = "";
         }
 
         /**
-         * @param {"on_print", "on_stop", "on_end", "on_error", "on_clear"} event
+         * @param {"on_print", "on_printf", "on_stop", "on_end", "on_error", "on_clear", "on_backspace"} event
          * @param {any} args
          */
         emit(event, ...args) {
@@ -1298,6 +1361,8 @@ let NAME = "";
             const compiler = new Compiler(code.split("\n"));
             if (def) {
                 compiler.on("on_print", text => console.info(text));
+                compiler.on("on_printf", text => console.info(text));
+                compiler.on("on_backspace", () => { });
                 compiler.on("on_stop", () => console.info("%c" + langs[lang]["stopped"], 'color: rgb(255, 0, 0)'));
                 compiler.on("on_end", () => console.info('%c' + langs[lang]["ended"], 'color: rgb(255, 255, 0)'));
                 compiler.on("on_error", err => {
