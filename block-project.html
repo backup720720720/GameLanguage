@@ -10,10 +10,9 @@
         <h1 id="NAME"></h1>
         <div class="buttons">
             <button class="btn" id="exit" onclick="window.location.href = './projects.html'"></button>
-            <button class="btn" id="stop_all" onclick="stop_all()"></button>
-            <button class="btn" id="start_compile" onclick="start_compile()"></button>
         </div>
-        <textarea spellcheck="false" style="resize: none;outline: none" id="code_area" class="code"></textarea>
+        <canvas id="block" class="block" width="700" height="600"></canvas>
+        <canvas id="canvas" class="canvas" width="500" height="500"></canvas>
         <div class="terminal" id="terminal">
             <div id="terminal-toggle" onclick="toggle_terminal()">
                 <span style="font-family: Consolas, serif" id="LNG-console"></span>
@@ -52,8 +51,6 @@
     const PROJECT_NAME = window.location.href.split("?name=").slice(1).join("");
     document.getElementById("ttl").innerHTML = "Gamey - " + PROJECT_NAME;
     const PROJECT = document.ProjectAPI.json().projects[PROJECT_NAME];
-    const code_area = document.getElementById("code_area");
-    code_area.value = PROJECT.code;
     const stop_all = () => {
         document._gamey.kill_all();
         log_console(document._gamey.langs[lang]["stopped"], "rgb(255, 0, 0)");
@@ -63,10 +60,10 @@
     const logf_console = (...a) => Console.logf(...a);
     const clear_console = () => Console.clear();
     const backspace_console = () => Console.backspace();
-    const start_compile = () => {
+    const start_compile = code => {
         if (document._gamey.any_alive_process()) return;
         document._gamey.kill_all();
-        const compiler = new document._gamey.Compiler(code_area.value.split("\n"));
+        const compiler = new document._gamey.Compiler(code.split("\n"));
         open_terminal();
         compiler.on("on_print", text => document._gamey.any_alive_process() ? log_console(text) : null);
         compiler.on("on_printf", text => document._gamey.any_alive_process() ? logf_console(text) : null);
@@ -106,30 +103,20 @@
         } else terminal_shortcut = false;
     });
     addEventListener("keyup", ev => delete held_keys[ev.key]);
-    setInterval(() => {
-        document.getElementById("stop_all").disabled = document._gamey.any_alive_process() ? undefined : true;
-        document.getElementById("start_compile").disabled = document._gamey.any_alive_process() ? true : undefined;
-    });
-    setInterval(() => {
-        if (PROJECT.code !== code_area.value) {
-            PROJECT.code = code_area.value;
+    function updateCode(code) {
+        if (PROJECT.code !== code) {
+            PROJECT.code = code;
             document.ProjectAPI.update_project_code(PROJECT_NAME, PROJECT.code);
         }
-    }, 5000);
+    }
     const translation = {
         en_US: {
             "exit": "Save & Exit",
-            "stop_all": "Stop",
-            "start_compile": "Start",
-            "error": "Error",
             "console": "Console"
         },
         tr_TR: {
             "exit": "Kaydet & Çık",
-            "stop_all": "Durdur",
-            "start_compile": "Başlat",
-            "error": "Hata",
-            "console": "Console"
+            "console": "Konsol"
         }
     };
     const create_popup = content => {
@@ -144,8 +131,6 @@
     window.load_start = () => {
         document.getElementById("NAME").innerHTML = NAME;
         document.getElementById("exit").innerHTML = translation[lang]["exit"];
-        document.getElementById("stop_all").innerHTML = translation[lang]["stop_all"];
-        document.getElementById("start_compile").innerHTML = translation[lang]["start_compile"];
         document.getElementById("LNG-console").innerHTML = translation[lang]["console"];
         // noinspection JSValidateTypes
         document.getElementById("terminal-toggle").style = "cursor: pointer;width: " + (25 + (translation[lang]["console"].length * 8)) + "px";
@@ -156,6 +141,19 @@
     @font-face {
         font-family: ProximaNova;
         src: url("Proxima Nova Font.otf") format("opentype");
+    }
+
+    .canvas {
+        position: absolute;
+        left: 55%;
+        outline: 1px solid white;
+        border-radius: 5px;
+        background-color: white;
+    }
+
+    .block {
+        position: absolute;
+        left: 0;
     }
 
     .clear {

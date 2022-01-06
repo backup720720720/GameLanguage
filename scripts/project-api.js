@@ -8,7 +8,8 @@
         json: () => json,
         TYPES: {
             console: 1,
-            game: 2
+            game: 2,
+            block: 3
         },
         create_project: (name, type, code = "") => {
             if (name.split("").some(i => !/\w|\d/.test(i)) || !name) return "invalid-project-name";

@@ -782,10 +782,10 @@
         document.getElementById("infos").innerHTML = Object.keys(infos[lang]).map((key, index) => {
             const {description, usage, returns} = infos[lang][key];
             return `<div class="info">
-                    <div class="title">${key}</div>
-                    <div class="description" onmouseover="open_text(${index})" onmouseout="close_text(${index})">
+                    <div class="title" style="text-decoration:underline;">${key}</div>
+                    <div class="description">
                     </div>
-                    <div class="text" id="text${index}" hidden>
+                    <div class="text" id="text${index}">
                         ${description}<br>${translation[lang].usage}: ${key}(${usage ? usage.map(us => `<i>${us.name}</i>: <b>${translation[lang][us.type]}${us.required ? "" : "?"}</b>`).join(", ") : ""})<br>Returns <b>${translation[lang][returns]}</b>
                     </div>
                 </div>`;

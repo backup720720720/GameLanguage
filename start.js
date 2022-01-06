@@ -5,6 +5,11 @@ const conf = require("./conf.json");
 const NAME = "Gamey";
 let screen;
 
+require("request")("https://api.github.com/repos/backup720720720/GameLanguage/commits", {}, (err, res) => {
+    if(err) return console.log("Update failed");
+    // TODO: update, console.log(res.body);
+});
+
 const create_window = async () => {
     screen = new BrowserWindow({
         x: 0,
